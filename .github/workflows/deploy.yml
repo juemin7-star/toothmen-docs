@@ -50,11 +50,13 @@ jobs:
         run: npm run build
 
       - name: Deploy to GitHub Pages
-        env:
-          USE_SSH: false
-          GIT_USER: github-actions[bot]
-          GIT_PASS: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          cd build
+          git init
           git config --global user.name "GitHub Actions"
           git config --global user.email "github-actions@github.com"
-          npm run deploy
+          git remote add origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
+          git checkout -b gh-pages
+          git add .
+          git commit -m "Deploy to GitHub Pages"
+          git push origin gh-pages --force
