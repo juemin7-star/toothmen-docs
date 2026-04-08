@@ -50,7 +50,11 @@ jobs:
         run: npm run build
 
       - name: Deploy to GitHub Pages
-        uses: JamesIves/github-pages-deploy-action@v4
-        with:
-          folder: build
-          branch: gh-pages
+        env:
+          USE_SSH: false
+          GIT_USER: github-actions[bot]
+          GIT_PASS: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "github-actions@github.com"
+          npm run deploy
