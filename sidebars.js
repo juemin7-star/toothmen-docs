@@ -15,12 +15,17 @@
  @type {import('@docusaurus/plugin-content-docs').SidebarsConfig}
  */
 const sidebars = {
-  // 简化版侧边栏，只显示intro文档
+  // 侧边栏显示两个文档
   tutorialSidebar: [
     {
       type: 'doc',
-      id: 'intro',
+      id: 'NEW-26040801-补丁',
       label: 'NEW-26040801-补丁',
+    },
+    {
+      type: 'doc',
+      id: 'NEW-260400901-补丁',
+      label: 'NEW-260400901-补丁',
     },
   ],
 };

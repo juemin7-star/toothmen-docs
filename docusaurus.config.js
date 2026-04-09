@@ -19,14 +19,15 @@ const config = {
     v4: true,
   },
 
-  // Production URL - 请替换为您的域名
-url: 'https://juemin7-star.github.io',
-baseUrl: '/toothmen-docs/',
+  // Production URL - 使用您的自定义域名
+url: 'https://toothmen.com',
+baseUrl: '/',
 
 
   // GitHub pages deployment config - 请替换为您的信息
 organizationName: 'juemin7-star',
 projectName: 'toothmen-docs',
+trailingSlash: false,
 
   onBrokenLinks: 'warn',
 
@@ -78,7 +79,7 @@ projectName: 'toothmen-docs',
         items: [
           {
             type: 'doc',
-            docId: 'intro',
+            docId: 'NEW-26040801-补丁',
             position: 'left',
             label: '文档',
           },
