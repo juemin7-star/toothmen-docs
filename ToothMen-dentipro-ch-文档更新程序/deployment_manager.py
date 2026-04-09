@@ -378,6 +378,25 @@ class DeploymentManager:
                      output_lines.append("提交ID: 未知（获取失败）")
                  
                  output_lines.append(f"您可以稍后手动执行: git push origin master")
+                 
+                 # 检查是否是认证问题
+                 if "permission denied" in output3.lower() or "authentication failed" in output3.lower():
+                     output_lines.append("\n🔐 检测到认证问题，请检查:")
+                     output_lines.append("1. SSH密钥配置是否正确")
+                     output_lines.append("2. GitHub Token是否有效")
+                     output_lines.append("3. 远程仓库权限是否正确")
+                 elif "Connection was reset" in output3 or "RPC failed" in output3:
+                     output_lines.append("\n🌐 检测到网络问题，请检查:")
+                     output_lines.append("1. 网络连接是否正常")
+                     output_lines.append("2. 防火墙是否阻止Git连接")
+                     output_lines.append("3. 代理设置是否正确")
+                 
+                 # 提供手动推送按钮的提示
+                 output_lines.append("\n💡 解决方案:")
+                 output_lines.append("1. 使用程序中的'手动推送'按钮")
+                 output_lines.append("2. 在终端中执行: git push origin master")
+                 output_lines.append("3. 检查Git远程配置: git remote -v")
+                 
                  return False, "\n".join(output_lines)
             
             # 5. 等待Cloudflare构建（模拟）
