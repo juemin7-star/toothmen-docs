@@ -379,23 +379,49 @@ class DeploymentManager:
                  
                  output_lines.append(f"您可以稍后手动执行: git push origin master")
                  
-                 # 检查是否是认证问题
-                 if "permission denied" in output3.lower() or "authentication failed" in output3.lower():
-                     output_lines.append("\n🔐 检测到认证问题，请检查:")
-                     output_lines.append("1. SSH密钥配置是否正确")
-                     output_lines.append("2. GitHub Token是否有效")
-                     output_lines.append("3. 远程仓库权限是否正确")
-                 elif "Connection was reset" in output3 or "RPC failed" in output3:
-                     output_lines.append("\n🌐 检测到网络问题，请检查:")
-                     output_lines.append("1. 网络连接是否正常")
-                     output_lines.append("2. 防火墙是否阻止Git连接")
-                     output_lines.append("3. 代理设置是否正确")
+                 # 详细错误分析
+                 output_lines.append("\n🔍 错误分析:")
+                 error_lower = output3.lower()
                  
-                 # 提供手动推送按钮的提示
-                 output_lines.append("\n💡 解决方案:")
-                 output_lines.append("1. 使用程序中的'手动推送'按钮")
-                 output_lines.append("2. 在终端中执行: git push origin master")
-                 output_lines.append("3. 检查Git远程配置: git remote -v")
+                 if "permission denied" in error_lower or "authentication failed" in error_lower:
+                     output_lines.append("🔐 检测到认证问题:")
+                     output_lines.append("  • SSH密钥配置不正确")
+                     output_lines.append("  • GitHub Token无效或过期")
+                     output_lines.append("  • 远程仓库权限不足")
+                     
+                 elif "connection" in error_lower or "timeout" in error_lower or "could not connect" in error_lower:
+                     output_lines.append("🌐 检测到网络连接问题:")
+                     output_lines.append("  • 网络连接不稳定")
+                     output_lines.append("  • 防火墙阻止GitHub连接")
+                     output_lines.append("  • DNS解析问题")
+                     
+                 elif "proxy" in error_lower:
+                     output_lines.append("🔄 检测到代理问题:")
+                     output_lines.append("  • Git代理设置不正确")
+                     output_lines.append("  • 代理服务器不可用")
+                     
+                 elif "remote origin already exists" in error_lower:
+                     output_lines.append("⚙️ 检测到配置问题:")
+                     output_lines.append("  • 远程仓库配置冲突")
+                     
+                 else:
+                     output_lines.append("❓ 未知错误类型")
+                     output_lines.append(f"  错误详情: {output3[:200]}...")
+                 
+                 # 提供详细的解决方案
+                 output_lines.append("\n💡 解决方案（使用程序内置工具）:")
+                 output_lines.append("1. 🔧 点击'Git连接诊断'按钮 - 自动诊断问题")
+                 output_lines.append("2. ⚡ 点击'切换到SSH'按钮 - 使用SSH替代HTTPS")
+                 output_lines.append("3. 🔄 点击'手动推送Git'按钮 - 手动重试推送")
+                 output_lines.append("4. 🌐 点击'测试网络连接'按钮 - 检查网络状态")
+                 
+                 output_lines.append("\n🔧 手动解决方案:")
+                 output_lines.append("1. 检查网络: ping github.com")
+                 output_lines.append("2. 清除代理: git config --global --unset http.proxy")
+                 output_lines.append("3. 检查配置: git remote -v")
+                 output_lines.append("4. 使用SSH: git remote set-url origin git@github.com:juemin7-star/toothmen-docs.git")
+                 
+                 output_lines.append("\n✅ 您的文档更改已安全保存在本地，不会丢失！")
                  
                  return False, "\n".join(output_lines)
             

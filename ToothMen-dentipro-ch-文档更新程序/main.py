@@ -336,6 +336,8 @@ class ToothMenDocsManager:
             ("🔍 检查Git状态", self.check_git_status),
             ("📊 查看Git日志", self.show_git_log),
             ("🔄 手动推送Git", self.manual_git_push),
+            ("🔧 Git连接诊断", self.diagnose_git_connection),
+            ("⚡ 切换到SSH", self.switch_to_ssh),
             ("🧹 清除npm缓存", self.clear_npm_cache),
             ("📁 打开项目文件夹", self.open_project_folder),
             ("⚙️ 检查配置", self.check_config),
@@ -1172,6 +1174,242 @@ sidebar_position: 1
                 self.log(f"手动推送异常: {str(e)}", "ERROR")
         
         thread = threading.Thread(target=_manual_push)
+        thread.daemon = True
+        thread.start()
+    
+    def diagnose_git_connection(self):
+        """诊断Git连接问题"""
+        self.log("🔧 开始Git连接诊断...", "INFO")
+        
+        import threading
+        
+        def _diagnose():
+            try:
+                self.log("=" * 60, "INFO")
+                self.log("Git连接问题诊断报告", "INFO")
+                self.log("=" * 60, "INFO")
+                
+                # 1. 测试网络连接
+                self.log("\n1. 测试网络连接...", "INFO")
+                success_ping, output_ping = self.deployment_manager.run_command(
+                    "ping",
+                    ["-n", "4", "github.com"]
+                )
+                
+                if success_ping:
+                    self.log("✅ Ping测试成功", "SUCCESS")
+                    # 提取延迟信息
+                    if "平均" in output_ping:
+                        for line in output_ping.split('\n'):
+                            if "平均" in line:
+                                self.log(f"网络延迟: {line.strip()}", "INFO")
+                else:
+                    self.log("❌ Ping测试失败", "ERROR")
+                    self.log("可能原因: 网络断开、DNS问题、防火墙阻止", "WARNING")
+                
+                # 2. 测试HTTPS连接
+                self.log("\n2. 测试HTTPS连接...", "INFO")
+                try:
+                    import urllib.request
+                    import urllib.error
+                    import ssl
+                    
+                    # 创建不验证SSL的上下文（仅用于测试）
+                    context = ssl._create_unverified_context()
+                    req = urllib.request.Request("https://github.com", method="HEAD")
+                    
+                    try:
+                        response = urllib.request.urlopen(req, timeout=10, context=context)
+                        self.log(f"✅ HTTPS连接成功 (状态码: {response.status})", "SUCCESS")
+                    except urllib.error.URLError as e:
+                        self.log(f"❌ HTTPS连接失败: {str(e)}", "ERROR")
+                except Exception as e:
+                    self.log(f"HTTPS测试异常: {str(e)}", "ERROR")
+                
+                # 3. 检查Git配置
+                self.log("\n3. 检查Git配置...", "INFO")
+                
+                # 检查远程仓库
+                success_remote, output_remote = self.deployment_manager.run_command(
+                    self.deployment_manager.git_path,
+                    ["remote", "-v"]
+                )
+                
+                if success_remote:
+                    self.log("远程仓库配置:", "INFO")
+                    self.log(output_remote, "INFO")
+                else:
+                    self.log("❌ 无法获取远程仓库配置", "ERROR")
+                
+                # 检查代理设置
+                success_proxy, output_proxy = self.deployment_manager.run_command(
+                    self.deployment_manager.git_path,
+                    ["config", "--global", "http.proxy"]
+                )
+                
+                if success_proxy and output_proxy.strip():
+                    self.log(f"⚠️ 检测到Git代理设置: {output_proxy.strip()}", "WARNING")
+                else:
+                    self.log("✅ 无Git代理设置", "SUCCESS")
+                
+                # 4. 测试Git连接
+                self.log("\n4. 测试Git连接...", "INFO")
+                success_git, output_git = self.deployment_manager.run_command(
+                    self.deployment_manager.git_path,
+                    ["ls-remote", "https://github.com/juemin7-star/toothmen-docs.git", "--heads"]
+                )
+                
+                if success_git:
+                    self.log("✅ Git连接成功", "SUCCESS")
+                else:
+                    self.log("❌ Git连接失败", "ERROR")
+                    self.log(f"错误详情: {output_git}", "ERROR")
+                    
+                    # 分析错误类型
+                    error_lower = output_git.lower()
+                    if "permission denied" in error_lower or "authentication failed" in error_lower:
+                        self.log("\n🔐 检测到认证问题:", "WARNING")
+                        self.log("  1. 检查SSH密钥配置", "INFO")
+                        self.log("  2. 检查GitHub Token是否有效", "INFO")
+                        self.log("  3. 检查远程仓库权限", "INFO")
+                    elif "connection" in error_lower or "timeout" in error_lower or "could not connect" in error_lower:
+                        self.log("\n🌐 检测到网络连接问题:", "WARNING")
+                        self.log("  1. 检查网络连接", "INFO")
+                        self.log("  2. 检查防火墙设置", "INFO")
+                        self.log("  3. 尝试使用VPN或切换网络", "INFO")
+                    elif "proxy" in error_lower:
+                        self.log("\n🔄 检测到代理问题:", "WARNING")
+                        self.log("  清除代理: git config --global --unset http.proxy", "INFO")
+                
+                # 5. 检查本地提交状态
+                self.log("\n5. 检查本地提交状态...", "INFO")
+                
+                # 获取最后提交
+                success_log, output_log = self.deployment_manager.run_command(
+                    self.deployment_manager.git_path,
+                    ["log", "--oneline", "-1"]
+                )
+                
+                if success_log:
+                    self.log(f"最后提交: {output_log.strip()}", "INFO")
+                else:
+                    self.log("无法获取提交信息", "WARNING")
+                
+                # 检查未推送的提交
+                success_unpushed, output_unpushed = self.deployment_manager.run_command(
+                    self.deployment_manager.git_path,
+                    ["log", "origin/master..HEAD", "--oneline"]
+                )
+                
+                if success_unpushed and output_unpushed.strip():
+                    self.log("⚠️ 有未推送的提交:", "WARNING")
+                    self.log(output_unpushed, "INFO")
+                else:
+                    self.log("✅ 所有提交已推送或没有新提交", "SUCCESS")
+                
+                # 6. 提供解决方案
+                self.log("\n" + "=" * 60, "INFO")
+                self.log("💡 解决方案建议:", "INFO")
+                self.log("=" * 60, "INFO")
+                
+                self.log("\n🔹 如果HTTPS连接失败:", "INFO")
+                self.log("  1. 切换到SSH方式（点击'切换到SSH'按钮）", "INFO")
+                self.log("  2. 检查防火墙设置", "INFO")
+                self.log("  3. 清除代理: git config --global --unset http.proxy", "INFO")
+                self.log("  4. 尝试使用VPN或手机热点", "INFO")
+                
+                self.log("\n🔹 如果认证失败:", "INFO")
+                self.log("  1. 生成SSH密钥: ssh-keygen -t ed25519 -C \"your_email\"", "INFO")
+                self.log("  2. 添加公钥到GitHub", "INFO")
+                self.log("  3. 测试SSH连接: ssh -T git@github.com", "INFO")
+                
+                self.log("\n🔹 立即操作:", "INFO")
+                self.log("  1. 使用'切换到SSH'按钮", "INFO")
+                self.log("  2. 使用'手动推送Git'按钮", "INFO")
+                self.log("  3. 检查网络连接后重试", "INFO")
+                
+                self.log("\n✅ 诊断完成！", "SUCCESS")
+                
+            except Exception as e:
+                self.log(f"诊断过程中出现异常: {str(e)}", "ERROR")
+        
+        thread = threading.Thread(target=_diagnose)
+        thread.daemon = True
+        thread.start()
+    
+    def switch_to_ssh(self):
+        """切换到SSH方式"""
+        self.log("⚡ 正在切换到SSH方式...", "INFO")
+        
+        import threading
+        
+        def _switch_ssh():
+            try:
+                # 1. 显示当前配置
+                self.log("当前远程仓库配置:", "INFO")
+                success_remote, output_remote = self.deployment_manager.run_command(
+                    self.deployment_manager.git_path,
+                    ["remote", "-v"]
+                )
+                
+                if success_remote:
+                    self.log(output_remote, "INFO")
+                else:
+                    self.log("无法获取远程仓库配置", "ERROR")
+                    return
+                
+                # 2. 切换到SSH
+                self.log("\n正在修改远程URL为SSH...", "INFO")
+                success_switch, output_switch = self.deployment_manager.run_command(
+                    self.deployment_manager.git_path,
+                    ["remote", "set-url", "origin", "git@github.com:juemin7-star/toothmen-docs.git"]
+                )
+                
+                if success_switch:
+                    self.log("✅ 已切换到SSH方式", "SUCCESS")
+                    
+                    # 3. 显示新配置
+                    self.log("\n新的远程仓库配置:", "INFO")
+                    success_new, output_new = self.deployment_manager.run_command(
+                        self.deployment_manager.git_path,
+                        ["remote", "-v"]
+                    )
+                    
+                    if success_new:
+                        self.log(output_new, "INFO")
+                    else:
+                        self.log("无法获取新配置", "WARNING")
+                    
+                    # 4. 测试SSH连接
+                    self.log("\n测试SSH连接...", "INFO")
+                    success_test, output_test = self.deployment_manager.run_command(
+                        "ssh",
+                        ["-T", "git@github.com"]
+                    )
+                    
+                    if success_test:
+                        self.log("✅ SSH连接成功", "SUCCESS")
+                        self.log(output_test, "INFO")
+                    else:
+                        self.log("⚠️ SSH连接测试失败", "WARNING")
+                        self.log("可能需要设置SSH密钥:", "INFO")
+                        self.log("  1. 生成SSH密钥: ssh-keygen -t ed25519 -C \"your_email\"", "INFO")
+                        self.log("  2. 添加公钥到GitHub", "INFO")
+                        self.log("  3. 启动ssh-agent: eval \"$(ssh-agent -s)\"", "INFO")
+                        self.log("  4. 添加私钥: ssh-add ~/.ssh/id_ed25519", "INFO")
+                    
+                    # 5. 询问是否立即推送
+                    self.log("\n💡 建议:", "INFO")
+                    self.log("  现在可以使用'手动推送Git'按钮进行推送", "INFO")
+                    self.log("  或稍后执行: git push origin master", "INFO")
+                    
+                else:
+                    self.log(f"❌ 切换到SSH失败: {output_switch}", "ERROR")
+                    
+            except Exception as e:
+                self.log(f"切换到SSH过程中出现异常: {str(e)}", "ERROR")
+        
+        thread = threading.Thread(target=_switch_ssh)
         thread.daemon = True
         thread.start()
     
