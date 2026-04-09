@@ -284,55 +284,110 @@ class DeploymentManager:
         except Exception as e:
             return False, f"本地预览异常: {str(e)}"
     
-    def auto_deploy(self):
+    def auto_deploy(self, commit_message=None):
         """
-        执行自动部署工作流
+        自动部署到GitHub
+        
+        Args:
+            commit_message: 提交信息，如果为None则自动生成
         
         Returns:
             (success, output)
         """
         try:
-            all_output = []
+            output_lines = []
             
-            # 0. 先检查Git仓库状态
+            # 1. 检查Git状态
+            output_lines.append("=== Git当前状态 ===")
             success0, output0 = self.run_command(self.git_path, ["status", "--short"])
-            all_output.append("=== Git当前状态 ===\n" + output0)
+            output_lines.append(output0)
             
-            # 1. Git添加所有更改
+            if not success0:
+                return False, "\n".join(output_lines)
+            
+            # 2. 添加所有更改
+            output_lines.append("\n=== Git添加更改 ===")
             success1, output1 = self.run_command(self.git_path, ["add", "."])
-            all_output.append("=== Git添加更改 ===\n" + output1)
+            output_lines.append(output1)
             
             if not success1:
-                all_output.append(f"Git添加失败，详细错误: {output1}")
-                return False, "\n".join(all_output)
+                return False, "\n".join(output_lines)
             
-            # 2. Git提交
-            commit_message = f"自动部署: {time.strftime('%Y-%m-%d %H:%M:%S')}"
+            # 3. 提交更改
+            output_lines.append("\n=== Git提交 ===")
+            if commit_message is None:
+                import time
+                commit_message = f"自动部署: {time.strftime('%Y-%m-%d %H:%M:%S')}"
+            
             success2, output2 = self.run_command(self.git_path, ["commit", "-m", commit_message])
-            all_output.append("=== Git提交 ===\n" + output2)
+            output_lines.append(output2)
             
             if not success2:
                 # 如果没有更改可提交，继续执行
                 if "nothing to commit" in output2.lower():
-                    all_output.append("提示: 没有需要提交的更改")
+                    output_lines.append("提示: 没有需要提交的更改")
                 else:
-                    return False, "\n".join(all_output)
+                    return False, "\n".join(output_lines)
             
-            # 3. Git推送到GitHub
-            success3, output3 = self.run_command(self.git_path, ["push", "origin", "master"])
-            all_output.append("=== Git推送 ===\n" + output3)
+            # 4. 推送到GitHub（带重试机制）
+            output_lines.append("\n=== Git推送 ===")
+            
+            # 尝试推送，最多重试3次
+            max_retries = 3
+            success3 = False
+            output3 = ""
+            
+            for attempt in range(max_retries):
+                if attempt > 0:
+                    output_lines.append(f"\n[重试 {attempt}/{max_retries-1}] 网络连接失败，等待5秒后重试...")
+                    import time
+                    time.sleep(5)
+                
+                success3, output3 = self.run_command(self.git_path, ["push", "origin", "master"])
+                output_lines.append(output3)
+                
+                if success3:
+                    break
+                else:
+                    # 检查是否是网络错误
+                    if "Connection was reset" in output3 or "RPC failed" in output3 or "unexpected disconnect" in output3:
+                        output_lines.append(f"检测到网络错误，将重试...")
+                        continue
+                    else:
+                        # 其他错误，不重试
+                        break
             
             if not success3:
-                return False, "\n".join(all_output)
+                 output_lines.append(f"\n⚠️ 推送失败，但提交已保存在本地")
+                 # 尝试获取最后提交ID
+                 try:
+                     import subprocess
+                     result = subprocess.run(
+                         [self.git_path, "log", "--oneline", "-1"],
+                         cwd=str(self.project_path),
+                         capture_output=True,
+                         text=True,
+                         encoding='utf-8'
+                     )
+                     if result.returncode == 0:
+                         commit_info = result.stdout.strip()
+                         output_lines.append(f"最后提交: {commit_info}")
+                     else:
+                         output_lines.append("提交ID: 未知（无法获取）")
+                 except:
+                     output_lines.append("提交ID: 未知（获取失败）")
+                 
+                 output_lines.append(f"您可以稍后手动执行: git push origin master")
+                 return False, "\n".join(output_lines)
             
-            # 4. 等待Cloudflare构建（模拟）
-            all_output.append("=== Cloudflare部署 ===")
-            all_output.append("已推送到GitHub，Cloudflare开始自动构建...")
-            all_output.append("构建通常需要2-3分钟完成")
-            all_output.append("部署到全球CDN需要1-2分钟")
-            all_output.append("总计约5分钟后网站完全更新")
+            # 5. 等待Cloudflare构建（模拟）
+            output_lines.append("\n=== Cloudflare部署 ===")
+            output_lines.append("已推送到GitHub，Cloudflare开始自动构建...")
+            output_lines.append("构建通常需要2-3分钟完成")
+            output_lines.append("部署到全球CDN需要1-2分钟")
+            output_lines.append("总计约5分钟后网站完全更新")
             
-            return True, "\n".join(all_output)
+            return True, "\n".join(output_lines)
             
         except Exception as e:
             return False, f"自动部署异常: {str(e)}"
