@@ -145,15 +145,6 @@ class DeploymentManager:
                 else:
                     use_shell = False
             
-            # 在Windows上隐藏控制台窗口
-            import sys
-            if sys.platform == "win32":
-                startupinfo = subprocess.STARTUPINFO()
-                startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-                startupinfo.wShowWindow = subprocess.SW_HIDE
-            else:
-                startupinfo = None
-            
             # 构建命令
             if use_shell:
                 # 使用shell模式
@@ -174,8 +165,7 @@ class DeploymentManager:
                     encoding='utf-8',
                     errors='replace',  # 替换无法解码的字符
                     timeout=timeout,
-                    shell=True,
-                    startupinfo=startupinfo
+                    shell=True
                 )
             else:
                 # 使用列表形式
@@ -198,8 +188,7 @@ class DeploymentManager:
                     encoding='utf-8',
                     errors='replace',  # 替换无法解码的字符
                     timeout=timeout,
-                    shell=False,
-                    startupinfo=startupinfo
+                    shell=False
                 )
             
             output = result.stdout
