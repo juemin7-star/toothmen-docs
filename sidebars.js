@@ -15,7 +15,7 @@
  @type {import('@docusaurus/plugin-content-docs').SidebarsConfig}
  */
 const sidebars = {
-  // 侧边栏显示两个文档
+  // 侧边栏显示三个文档
   tutorialSidebar: [
     {
       type: 'doc',
@@ -24,8 +24,13 @@ const sidebars = {
     },
     {
       type: 'doc',
-      id: 'NEW-260400901-补丁',
-      label: 'NEW-260400901-补丁',
+      id: 'NEW-26040901-补丁',
+      label: 'NEW-26040901-补丁',
+    },
+    {
+      type: 'doc',
+      id: 'NEW-26040902',
+      label: 'NEW-26040902',
     },
   ],
 };
