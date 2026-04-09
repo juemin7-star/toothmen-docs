@@ -20,6 +20,7 @@ from pathlib import Path
 from file_manager import FileManager
 from deployment_manager import DeploymentManager
 from logger import Logger
+from mdx_checker import MDXChecker
 
 class ToothMenDocsManager:
     def __init__(self, root):
@@ -238,45 +239,53 @@ class ToothMenDocsManager:
         deploy_frame = ttk.LabelFrame(parent, text="部署工作流", padding="10")
         deploy_frame.grid(row=2, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 10))
         
-        # 开始/结束按钮框架
-        control_frame = ttk.Frame(deploy_frame)
-        control_frame.grid(row=0, column=0, columnspan=6, sticky=(tk.W, tk.E), pady=(0, 10))
+        # ========== 第一行：独立功能按钮 ==========
+        top_control_frame = ttk.Frame(deploy_frame)
+        top_control_frame.grid(row=0, column=0, columnspan=6, sticky=(tk.W, tk.E), pady=(0, 10))
         
-        # 开始按钮
-        self.btn_start = tk.Button(control_frame, text="▶ 开始部署流程", 
+        # MDX检测按钮（独立，一直可用）
+        self.btn_mdx_check = tk.Button(top_control_frame, text="🔍 检测MDX语法&更新侧边栏", 
+                                      command=self.check_mdx_and_update_sidebars, width=29,
+                                      bg="SystemButtonFace", fg="black", relief="raised", bd=2)
+        self.btn_mdx_check.pack(side=tk.LEFT, padx=8)
+        
+        # 开始部署流程按钮
+        self.btn_start = tk.Button(top_control_frame, text="▶ 开始部署流程", 
                                   command=self.start_deployment_flow, width=15,
                                   bg="SystemButtonFace", fg="black", relief="raised", bd=2)
-        self.btn_start.pack(side=tk.LEFT, padx=5)
+        self.btn_start.pack(side=tk.LEFT, padx=8)
         
-        # 结束按钮
-        self.btn_end = tk.Button(control_frame, text="■ 结束流程", 
+        # 结束流程按钮
+        self.btn_end = tk.Button(top_control_frame, text="■ 结束流程", 
                                 command=self.end_deployment_flow, width=15, state="disabled",
                                 bg="SystemButtonFace", fg="black", relief="raised", bd=2)
-        self.btn_end.pack(side=tk.LEFT, padx=5)
+        self.btn_end.pack(side=tk.LEFT, padx=8)
         
         # 验证部署按钮（独立，一直可用）
-        self.btn_verify = tk.Button(control_frame, text="🌐 验证部署", 
+        self.btn_verify = tk.Button(top_control_frame, text="🌐 验证部署", 
                                    command=self.verify_deployment, width=15,
                                    bg="SystemButtonFace", fg="black", relief="raised", bd=2)
-        self.btn_verify.pack(side=tk.LEFT, padx=5)
+        self.btn_verify.pack(side=tk.LEFT, padx=8)
         
         # 分隔线
-        ttk.Separator(deploy_frame, orient='horizontal').grid(row=1, column=0, columnspan=6, sticky=(tk.W, tk.E), pady=5)
+        ttk.Separator(deploy_frame, orient='horizontal').grid(row=1, column=0, columnspan=6, sticky=(tk.W, tk.E), pady=10)
         
-        # 部署步骤按钮
+        # ========== 第二行：部署流程按钮（点击开始后激活） ==========
+        # 部署步骤按钮（点击"开始部署流程"后激活）
         self.deployment_buttons = [
-            ("更新侧边栏", self.update_sidebars, "根据右侧文件列表顺序自动更新sidebars.js"),
             ("本地构建测试", self.local_build_test, "执行npm run build测试构建"),
             ("本地预览", self.local_preview, "启动本地开发服务器预览"),
             ("确认预览", self.confirm_preview, "手动确认本地预览成功"),
             ("自动部署", self.auto_deploy, "执行Git推送和Cloudflare部署"),
         ]
         
-        # 创建步骤按钮
+        # 创建部署步骤按钮
         for i, (text, command, tooltip) in enumerate(self.deployment_buttons):
+            # 所有部署按钮默认禁用，点击"开始部署流程"后激活
             btn = tk.Button(deploy_frame, text=text, command=command, width=15, state="disabled",
                           bg="SystemButtonFace", fg="black", relief="raised", bd=2)
-            btn.grid(row=2, column=i, padx=5, pady=5)
+            # 增加按钮间距，使布局更均匀
+            btn.grid(row=2, column=i, padx=8, pady=5)
             
             # 添加工具提示
             self.create_tooltip(btn, tooltip)
@@ -685,8 +694,125 @@ sidebar_position: 1
     
     # ========== 部署工作流方法 ==========
     
-    def update_sidebars(self):
-        """更新侧边栏"""
+    def check_mdx_syntax(self):
+        """检测MDX语法"""
+        try:
+            # 更新按钮状态为运行中
+            self.update_button_state("🔍 检测MDX语法", "running")
+            self.log("[MDX] 开始检测MDX文件语法...", "INFO")
+            
+            # 创建MDX检测器
+            mdx_checker = MDXChecker(self.prod_folder)
+            
+            # 执行检测
+            results = mdx_checker.check_all_mdx_files()
+            
+            # 生成报告
+            report = mdx_checker.format_report(results)
+            
+            # 记录报告
+            self.log(report, "INFO")
+            
+            if results:
+                self.log("[WARNING] 检测到MDX语法问题，建议修复后再更新侧边栏", "WARNING")
+                # 更新按钮状态为错误
+                self.update_button_state("🔍 检测MDX语法", "error")
+                
+                # 提供修复建议
+                for file_path, issues in results.items():
+                    suggestions = mdx_checker.get_fix_suggestions(issues)
+                    for suggestion in suggestions:
+                        self.log(f"[SUGGESTION] {suggestion}", "INFO")
+                
+                # 询问是否继续
+                response = messagebox.askyesno(
+                    "MDX语法检测结果",
+                    f"检测到 {len(results)} 个文件存在语法问题。\n\n是否继续更新侧边栏？\n\n建议：修复问题后再继续。"
+                )
+                
+                if response:
+                    self.log("[INFO] 用户选择继续更新侧边栏", "INFO")
+                    # 重置按钮状态
+                    self.update_button_state("🔍 检测MDX语法", "normal")
+                    self.update_sidebars(skip_check=True)
+                else:
+                    self.log("[INFO] 用户选择先修复MDX语法问题", "INFO")
+                    # 重置按钮状态
+                    self.update_button_state("🔍 检测MDX语法", "normal")
+            else:
+                self.log("[SUCCESS] 所有MDX文件语法检查通过，可以安全更新侧边栏", "SUCCESS")
+                # 更新按钮状态为成功
+                self.update_button_state("🔍 检测MDX语法", "success")
+                # 询问用户是否继续更新侧边栏
+                response = messagebox.askyesno(
+                    "MDX语法检测通过",
+                    "所有MDX文件语法检查通过，可以安全更新侧边栏。\n\n是否立即更新侧边栏？"
+                )
+                
+                if response:
+                    self.log("[INFO] 用户选择立即更新侧边栏", "INFO")
+                    self.update_sidebars(skip_check=True)
+                else:
+                    self.log("[INFO] 用户选择稍后更新侧边栏", "INFO")
+                    # 重置按钮状态
+                    self.update_button_state("🔍 检测MDX语法", "normal")
+                
+        except Exception as e:
+            self.log(f"[ERROR] MDX语法检测失败: {str(e)}", "ERROR")
+            # 更新按钮状态为错误
+            self.update_button_state("🔍 检测MDX语法&更新侧边栏", "error")
+    
+    def check_mdx_and_update_sidebars(self):
+        """检测MDX语法并自动更新侧边栏"""
+        try:
+            # 更新按钮状态为运行中
+            self.update_button_state("🔍 检测MDX语法&更新侧边栏", "running")
+            self.log("[MDX] 开始检测MDX文件语法并更新侧边栏...", "INFO")
+            
+            # 创建MDX检测器
+            mdx_checker = MDXChecker(self.prod_folder)
+            
+            # 执行检测
+            results = mdx_checker.check_all_mdx_files()
+            
+            # 生成报告
+            report = mdx_checker.format_report(results)
+            
+            # 记录报告
+            self.log(report, "INFO")
+            
+            if results:
+                self.log("[ERROR] 检测到MDX语法问题，停止更新侧边栏", "ERROR")
+                # 更新按钮状态为错误
+                self.update_button_state("🔍 检测MDX语法&更新侧边栏", "error")
+                
+                # 提供修复建议
+                for file_path, issues in results.items():
+                    suggestions = mdx_checker.get_fix_suggestions(issues)
+                    for suggestion in suggestions:
+                        self.log(f"[SUGGESTION] {suggestion}", "INFO")
+                
+                # 显示错误消息
+                messagebox.showerror(
+                    "MDX语法检测失败",
+                    f"检测到 {len(results)} 个文件存在语法问题。\n\n请先修复MDX语法问题，然后再尝试更新侧边栏。"
+                )
+                
+                # 重置按钮状态
+                self.update_button_state("🔍 检测MDX语法&更新侧边栏", "normal")
+            else:
+                self.log("[SUCCESS] 所有MDX文件语法检查通过，开始更新侧边栏...", "SUCCESS")
+                
+                # 自动更新侧边栏
+                self._update_sidebars_directly()
+                
+        except Exception as e:
+            self.log(f"[ERROR] MDX语法检测并更新侧边栏失败: {str(e)}", "ERROR")
+            # 更新按钮状态为错误
+            self.update_button_state("🔍 检测MDX语法&更新侧边栏", "error")
+    
+    def _update_sidebars_directly(self):
+        """直接更新侧边栏（不进行语法检测）"""
         try:
             # 在后台线程中执行，传递None让部署管理器自动获取实际文件
             thread = threading.Thread(target=self._update_sidebars_thread, args=(None,))
@@ -694,11 +820,38 @@ sidebar_position: 1
             thread.start()
             
             # 更新按钮状态
-            self.update_button_state("更新侧边栏", "running")
+            self.update_button_state("🔍 检测MDX语法&更新侧边栏", "running")
             
         except Exception as e:
             self.log(f"更新侧边栏失败: {str(e)}", "ERROR")
-            self.update_button_state("更新侧边栏", "error")
+            self.update_button_state("🔍 检测MDX语法&更新侧边栏", "error")
+    
+    def update_sidebars(self, skip_check=False):
+        """
+        更新侧边栏（已合并到检测MDX语法&更新侧边栏按钮）
+        
+        Args:
+            skip_check: 是否跳过MDX语法检测（默认False）
+        """
+        try:
+            # 显示提示信息，引导用户使用合并按钮
+            self.log("[INFO] '更新侧边栏'功能已合并到'🔍 检测MDX语法&更新侧边栏'按钮", "INFO")
+            self.log("[INFO] 请使用'🔍 检测MDX语法&更新侧边栏'按钮进行完整流程", "INFO")
+            
+            # 询问用户是否要使用合并按钮
+            response = messagebox.askyesno(
+                "功能已合并",
+                "'更新侧边栏'功能已合并到'🔍 检测MDX语法&更新侧边栏'按钮。\n\n是否立即使用合并按钮执行完整流程？"
+            )
+            
+            if response:
+                self.log("[INFO] 用户选择使用合并按钮", "INFO")
+                self.check_mdx_and_update_sidebars()
+            else:
+                self.log("[INFO] 用户取消操作", "INFO")
+                
+        except Exception as e:
+            self.log(f"更新侧边栏失败: {str(e)}", "ERROR")
     
     def _update_sidebars_thread(self, prod_files):
         """更新侧边栏的线程函数"""
@@ -707,14 +860,17 @@ sidebar_position: 1
             
             if success:
                 self.log(message, "SUCCESS")
-                self.update_button_state("更新侧边栏", "success")
+                # 更新合并按钮的状态
+                self.update_button_state("🔍 检测MDX语法&更新侧边栏", "success")
             else:
                 self.log(message, "ERROR")
-                self.update_button_state("更新侧边栏", "error")
+                # 更新合并按钮的状态
+                self.update_button_state("🔍 检测MDX语法&更新侧边栏", "error")
                 
         except Exception as e:
             self.log(f"侧边栏更新异常: {str(e)}", "ERROR")
-            self.update_button_state("更新侧边栏", "error")
+            # 更新合并按钮的状态
+            self.update_button_state("🔍 检测MDX语法&更新侧边栏", "error")
     
     def local_build_test(self):
         """本地构建测试"""
@@ -1175,7 +1331,13 @@ sidebar_position: 1
     
     def update_button_state(self, button_name, state):
         """更新按钮状态"""
-        button = getattr(self, f"btn_{button_name.replace(' ', '_')}")
+        # 特殊处理MDX检测按钮
+        if button_name == "🔍 检测MDX语法&更新侧边栏":
+            button = self.btn_mdx_check
+        else:
+            # 处理其他按钮名称，移除特殊字符
+            button_attr_name = button_name.replace(' ', '_')
+            button = getattr(self, f"btn_{button_attr_name}")
         
         colors = {
             "normal": ("SystemButtonFace", "black"),
@@ -1191,8 +1353,8 @@ sidebar_position: 1
             foreground=fg_color
         ))
         
-        # 如果是成功状态，解锁下一个步骤
-        if state == "success":
+        # 如果是成功状态，解锁下一个步骤（MDX检测按钮除外）
+        if state == "success" and button_name != "🔍 检测MDX语法&更新侧边栏":
             # 找到当前按钮的索引
             for i, (name, _, _) in enumerate(self.deployment_buttons):
                 if name == button_name:

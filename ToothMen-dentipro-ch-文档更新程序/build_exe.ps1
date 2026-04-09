@@ -221,6 +221,6 @@ exe = EXE(
 try {
     Main
 } catch {
-    Write-Host "$Red[ERROR] 脚本执行失败: $_$Reset"
+    Write-Host "[ERROR] 脚本执行失败: $_"
     exit 1
 }
