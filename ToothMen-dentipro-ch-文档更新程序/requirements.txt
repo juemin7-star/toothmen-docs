@@ -1,0 +1,16 @@
+# ToothMen文档管理工具依赖包
+
+# 核心依赖
+python>=3.8
+
+# GUI框架
+# Tkinter是Python标准库，无需安装
+
+# 其他工具
+# 无额外依赖，所有功能使用Python标准库实现
+
+# 注意：打包为EXE时需要PyInstaller
+# pip install pyinstaller
+
+# 可选：如果需要更高级的日志功能
+# pip install colorama

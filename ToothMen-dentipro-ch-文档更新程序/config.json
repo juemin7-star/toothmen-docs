@@ -1,0 +1,33 @@
+{
+  "project_path": "D:\\magicdental开发备忘录\\toothmen-官方说明文档系统\\ToothMen-Docs-Simple",
+  "test_folder": "docs-测试中转",
+  "prod_folder": "docs",
+  "sidebars_path": "sidebars.js",
+  "npm_path": "npm",
+  "git_path": "C:\\Program Files\\Git\\cmd\\git.exe",
+  "auto_refresh": true,
+  "log_level": "INFO",
+  "log_file": "toothmen_docs_manager.log",
+  "ui": {
+    "theme": "default",
+    "font_size": 10,
+    "window_width": 1200,
+    "window_height": 800
+  },
+  "deployment": {
+    "auto_commit": true,
+    "commit_message_prefix": "自动部署: ",
+    "push_to_remote": true,
+    "remote_name": "origin",
+    "branch_name": "master",
+    "wait_for_cloudflare": true,
+    "cloudflare_check_interval": 30
+  },
+  "file_management": {
+    "allowed_extensions": [".mdx", ".md"],
+    "default_template": "default",
+    "auto_open_after_create": true,
+    "confirm_delete": true,
+    "backup_before_move": true
+  }
+}
