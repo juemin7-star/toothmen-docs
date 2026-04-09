@@ -3,13 +3,13 @@ const sidebars = {
   tutorialSidebar: [
     {
       type: 'doc',
-      id: 'NEW-26040901-补丁',
-      label: 'NEW-26040901-补丁',
+      id: 'NEW-26040801-补丁',
+      label: 'NEW-26040801-补丁',
     },
     {
       type: 'doc',
-      id: 'NEW-26040801-补丁',
-      label: 'NEW-26040801-补丁',
+      id: 'NEW-26040901-补丁',
+      label: 'NEW-26040901-补丁',
     },
     {
       type: 'doc',

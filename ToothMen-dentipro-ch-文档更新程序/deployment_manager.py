@@ -102,7 +102,7 @@ class DeploymentManager:
         
         return "\n".join(lines)
     
-    def run_command(self, command, args, cwd=None, timeout=300):
+    def run_command(self, command, args, cwd=None, timeout=300, use_shell=None):
         """
         运行命令行命令
         
@@ -111,6 +111,7 @@ class DeploymentManager:
             args: 参数列表
             cwd: 工作目录
             timeout: 超时时间（秒）
+            use_shell: 是否使用shell（None表示自动判断）
         
         Returns:
             (success, output)
@@ -119,25 +120,68 @@ class DeploymentManager:
             if cwd is None:
                 cwd = str(self.project_path)
             
-            # 构建完整命令
-            full_command = [command] + args
+            # 自动判断是否使用shell
+            if use_shell is None:
+                # npm命令通常需要shell=True
+                if command.lower() == 'npm':
+                    use_shell = True
+                else:
+                    use_shell = False
             
-            # 执行命令
-            result = subprocess.run(
-                full_command,
-                cwd=cwd,
-                capture_output=True,
-                text=True,
-                encoding='utf-8',
-                timeout=timeout,
-                shell=True
-            )
+            # 构建命令
+            if use_shell:
+                # 使用shell模式
+                if isinstance(args, list):
+                    full_command = f"{command} {' '.join(args)}"
+                else:
+                    full_command = f"{command} {args}"
+                
+                # 添加调试信息
+                debug_info = f"执行命令: {full_command}\n工作目录: {cwd}\n模式: shell\n"
+                
+                # 执行命令（使用shell模式）
+                result = subprocess.run(
+                    full_command,
+                    cwd=cwd,
+                    capture_output=True,
+                    text=True,
+                    encoding='utf-8',
+                    errors='replace',  # 替换无法解码的字符
+                    timeout=timeout,
+                    shell=True
+                )
+            else:
+                # 使用列表形式
+                if isinstance(args, list):
+                    cmd_list = [command] + args
+                    full_command = f"{command} {' '.join(args)}"
+                else:
+                    cmd_list = [command, args]
+                    full_command = f"{command} {args}"
+                
+                # 添加调试信息
+                debug_info = f"执行命令: {full_command}\n工作目录: {cwd}\n模式: 列表\n"
+                
+                # 执行命令（使用列表形式）
+                result = subprocess.run(
+                    cmd_list,
+                    cwd=cwd,
+                    capture_output=True,
+                    text=True,
+                    encoding='utf-8',
+                    errors='replace',  # 替换无法解码的字符
+                    timeout=timeout,
+                    shell=False
+                )
             
             output = result.stdout
             if result.stderr:
                 output += "\n" + result.stderr
             
             success = (result.returncode == 0)
+            
+            # 添加返回码信息
+            output = f"{debug_info}返回码: {result.returncode}\n输出:\n{output}"
             
             return success, output
             
@@ -170,7 +214,7 @@ class DeploymentManager:
     
     def local_preview(self):
         """
-        启动本地预览
+        启动本地预览（只启动，不检查是否成功）
         
         Returns:
             (success, output)
@@ -190,7 +234,7 @@ class DeploymentManager:
             import sys
             
             # 使用subprocess.Popen在后台启动
-            cmd = [self.npm_path, "start"]
+            cmd = f"{self.npm_path} start"
             
             # 在Windows上隐藏控制台窗口
             if sys.platform == "win32":
@@ -207,27 +251,18 @@ class DeploymentManager:
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 startupinfo=startupinfo,
+                shell=True,
                 creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if sys.platform == "win32" else 0
             )
             
-            # 等待几秒让服务器启动
-            time.sleep(5)
+            # 存储进程引用，以便后续检查
+            self.preview_process = process
             
-            # 检查服务器是否启动成功
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            result = sock.connect_ex(('localhost', 3000))
-            sock.close()
+            # 等待2秒让进程启动
+            time.sleep(2)
             
-            if result == 0:
-                return True, "本地预览服务器启动成功，请访问 http://localhost:3000"
-            else:
-                # 尝试获取进程输出
-                try:
-                    stdout, stderr = process.communicate(timeout=2)
-                    output = stdout.decode('utf-8', errors='ignore') + stderr.decode('utf-8', errors='ignore')
-                    return False, f"服务器启动失败:\n{output}"
-                except:
-                    return False, "服务器启动失败（超时）"
+            # 不检查是否成功，只返回启动信息
+            return True, "本地预览服务器已启动，请手动访问 http://localhost:3000 确认是否成功"
             
         except Exception as e:
             return False, f"本地预览异常: {str(e)}"
@@ -242,11 +277,16 @@ class DeploymentManager:
         try:
             all_output = []
             
+            # 0. 先检查Git仓库状态
+            success0, output0 = self.run_command(self.git_path, ["status", "--short"])
+            all_output.append("=== Git当前状态 ===\n" + output0)
+            
             # 1. Git添加所有更改
             success1, output1 = self.run_command(self.git_path, ["add", "."])
             all_output.append("=== Git添加更改 ===\n" + output1)
             
             if not success1:
+                all_output.append(f"Git添加失败，详细错误: {output1}")
                 return False, "\n".join(all_output)
             
             # 2. Git提交

@@ -135,10 +135,14 @@ class ToothMenDocsManager:
         btn_frame = ttk.Frame(left_header)
         btn_frame.pack(side=tk.RIGHT)
         
-        ttk.Button(btn_frame, text="新建", width=8, command=self.create_new_file).pack(side=tk.LEFT, padx=2)
-        ttk.Button(btn_frame, text="删除", width=8, command=self.delete_selected_file).pack(side=tk.LEFT, padx=2)
-        ttk.Button(btn_frame, text="重命名", width=8, command=self.rename_selected_file).pack(side=tk.LEFT, padx=2)
-        ttk.Button(btn_frame, text="刷新", width=8, command=self.refresh_file_lists).pack(side=tk.LEFT, padx=2)
+        tk.Button(btn_frame, text="新建", width=8, command=self.create_new_file,
+                 bg="SystemButtonFace", fg="black", relief="raised", bd=2).pack(side=tk.LEFT, padx=2)
+        tk.Button(btn_frame, text="删除", width=8, command=self.delete_selected_file,
+                 bg="SystemButtonFace", fg="black", relief="raised", bd=2).pack(side=tk.LEFT, padx=2)
+        tk.Button(btn_frame, text="重命名", width=8, command=self.rename_selected_file,
+                 bg="SystemButtonFace", fg="black", relief="raised", bd=2).pack(side=tk.LEFT, padx=2)
+        tk.Button(btn_frame, text="刷新", width=8, command=self.refresh_file_lists,
+                 bg="SystemButtonFace", fg="black", relief="raised", bd=2).pack(side=tk.LEFT, padx=2)
         
         # 左侧文件列表
         left_list_frame = ttk.Frame(left_frame)
@@ -167,21 +171,25 @@ class ToothMenDocsManager:
         move_frame.pack(pady=10)
         
         # 上移按钮
-        ttk.Button(move_frame, text="↑", width=3,
-                  command=self.move_up).pack(pady=2)
+        tk.Button(move_frame, text="↑", width=3,
+                 command=self.move_up,
+                 bg="SystemButtonFace", fg="black", relief="raised", bd=2).pack(pady=2)
         
         # 下移按钮
-        ttk.Button(move_frame, text="↓", width=3,
-                  command=self.move_down).pack(pady=2)
+        tk.Button(move_frame, text="↓", width=3,
+                 command=self.move_down,
+                 bg="SystemButtonFace", fg="black", relief="raised", bd=2).pack(pady=2)
         
         # 分隔线
         ttk.Separator(arrow_frame, orient='horizontal').pack(fill='x', pady=10)
         
         # 左右交换箭头
-        ttk.Button(arrow_frame, text="→", width=3, 
-                  command=self.move_to_prod).pack(pady=5)
-        ttk.Button(arrow_frame, text="←", width=3, 
-                  command=self.move_to_test).pack(pady=5)
+        tk.Button(arrow_frame, text="→", width=3, 
+                 command=self.move_to_prod,
+                 bg="SystemButtonFace", fg="black", relief="raised", bd=2).pack(pady=5)
+        tk.Button(arrow_frame, text="←", width=3, 
+                 command=self.move_to_test,
+                 bg="SystemButtonFace", fg="black", relief="raised", bd=2).pack(pady=5)
         
         # 右侧：生产文件夹
         right_frame = ttk.Frame(file_frame)
@@ -229,13 +237,15 @@ class ToothMenDocsManager:
         control_frame.grid(row=0, column=0, columnspan=6, sticky=(tk.W, tk.E), pady=(0, 10))
         
         # 开始按钮
-        self.btn_start = ttk.Button(control_frame, text="▶ 开始部署流程", 
-                                   command=self.start_deployment_flow, width=15)
+        self.btn_start = tk.Button(control_frame, text="▶ 开始部署流程", 
+                                  command=self.start_deployment_flow, width=15,
+                                  bg="SystemButtonFace", fg="black", relief="raised", bd=2)
         self.btn_start.pack(side=tk.LEFT, padx=5)
         
         # 结束按钮
-        self.btn_end = ttk.Button(control_frame, text="■ 结束流程", 
-                                 command=self.end_deployment_flow, width=15, state="disabled")
+        self.btn_end = tk.Button(control_frame, text="■ 结束流程", 
+                                command=self.end_deployment_flow, width=15, state="disabled",
+                                bg="SystemButtonFace", fg="black", relief="raised", bd=2)
         self.btn_end.pack(side=tk.LEFT, padx=5)
         
         # 分隔线
@@ -246,12 +256,15 @@ class ToothMenDocsManager:
             ("更新侧边栏", self.update_sidebars, "根据右侧文件列表顺序自动更新sidebars.js"),
             ("本地构建测试", self.local_build_test, "执行npm run build测试构建"),
             ("本地预览", self.local_preview, "启动本地开发服务器预览"),
+            ("确认预览", self.confirm_preview, "手动确认本地预览成功"),
             ("自动部署", self.auto_deploy, "执行Git推送和Cloudflare部署"),
+            ("验证部署", self.verify_deployment, "打开公网文档网站验证部署结果"),
         ]
         
         # 创建步骤按钮
         for i, (text, command, tooltip) in enumerate(self.deployment_buttons):
-            btn = ttk.Button(deploy_frame, text=text, command=command, width=15, state="disabled")
+            btn = tk.Button(deploy_frame, text=text, command=command, width=15, state="disabled",
+                          bg="SystemButtonFace", fg="black", relief="raised", bd=2)
             btn.grid(row=2, column=i, padx=5, pady=5)
             
             # 添加工具提示
@@ -282,12 +295,15 @@ class ToothMenDocsManager:
         log_control_frame = ttk.Frame(log_frame)
         log_control_frame.grid(row=1, column=0, sticky=(tk.W, tk.E), pady=(5, 0))
         
-        ttk.Button(log_control_frame, text="清空日志", 
-                  command=self.clear_log).pack(side=tk.LEFT, padx=2)
-        ttk.Button(log_control_frame, text="保存日志", 
-                  command=self.save_log).pack(side=tk.LEFT, padx=2)
-        ttk.Button(log_control_frame, text="复制日志", 
-                  command=self.copy_log).pack(side=tk.LEFT, padx=2)
+        tk.Button(log_control_frame, text="清空日志", 
+                 command=self.clear_log,
+                 bg="SystemButtonFace", fg="black", relief="raised", bd=2).pack(side=tk.LEFT, padx=2)
+        tk.Button(log_control_frame, text="保存日志", 
+                 command=self.save_log,
+                 bg="SystemButtonFace", fg="black", relief="raised", bd=2).pack(side=tk.LEFT, padx=2)
+        tk.Button(log_control_frame, text="复制日志", 
+                 command=self.copy_log,
+                 bg="SystemButtonFace", fg="black", relief="raised", bd=2).pack(side=tk.LEFT, padx=2)
     
     def create_tooltip(self, widget, text):
         """创建工具提示"""
@@ -710,12 +726,11 @@ sidebar_position: 1
             success, output = self.deployment_manager.local_preview()
             
             if success:
-                self.log("本地预览启动成功", "SUCCESS")
+                self.log(output, "SUCCESS")
                 self.update_button_state("本地预览", "success")
                 
-                # 打开浏览器
-                import webbrowser
-                webbrowser.open("http://localhost:3000")
+                # 不自动打开浏览器，让用户手动访问
+                self.log("请手动访问 http://localhost:3000 确认预览效果", "INFO")
                 
             else:
                 self.log(f"本地预览启动失败:\n{output}", "ERROR")
@@ -753,6 +768,36 @@ sidebar_position: 1
         except Exception as e:
             self.log(f"自动部署异常: {str(e)}", "ERROR")
             self.update_button_state("自动部署", "error")
+    
+    def verify_deployment(self):
+        """验证部署结果"""
+        try:
+            self.update_button_state("验证部署", "running")
+            
+            # 打开公网文档网站
+            import webbrowser
+            website_url = "https://docs.toothmen.com"
+            webbrowser.open(website_url)
+            
+            self.log(f"已打开公网文档网站: {website_url}", "SUCCESS")
+            self.update_button_state("验证部署", "success")
+            
+        except Exception as e:
+            self.log(f"验证部署失败: {str(e)}", "ERROR")
+            self.update_button_state("验证部署", "error")
+    
+    def confirm_preview(self):
+        """确认本地预览成功（用户手动确认，不检查服务器）"""
+        try:
+            self.update_button_state("确认预览", "running")
+            
+            # 用户手动确认，总是成功
+            self.log("本地预览已手动确认成功", "SUCCESS")
+            self.update_button_state("确认预览", "success")
+                
+        except Exception as e:
+            self.log(f"确认预览异常: {str(e)}", "ERROR")
+            self.update_button_state("确认预览", "error")
     
     def start_deployment_flow(self):
         """开始部署流程"""
@@ -831,8 +876,8 @@ sidebar_position: 1
             # 找到当前按钮的索引
             for i, (name, _, _) in enumerate(self.deployment_buttons):
                 if name == button_name:
-                    # 如果是自动部署成功，2秒后结束流程
-                    if button_name == "自动部署":
+                    # 如果是自动部署或验证部署成功，2秒后结束流程
+                    if button_name in ["自动部署", "验证部署"]:
                         self.root.after(2000, self.end_deployment_flow)
                     else:
                         # 解锁下一个步骤
