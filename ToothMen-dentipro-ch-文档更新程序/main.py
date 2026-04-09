@@ -777,7 +777,7 @@ sidebar_position: 1
             self.update_button_state("自动部署", "error")
     
     def verify_deployment(self):
-        """验证部署结果（独立按钮，一直可用）"""
+        """验证部署结果（打开公网文档网站）"""
         try:
             # 更新按钮状态为运行中
             self.btn_verify.config(bg="yellow", fg="black", state="normal")
@@ -788,6 +788,12 @@ sidebar_position: 1
             webbrowser.open(website_url)
             
             self.log(f"已打开公网文档网站: {website_url}", "SUCCESS")
+            self.log("⚠️ 重要提示：Cloudflare缓存说明", "WARNING")
+            self.log("1. Cloudflare CDN会缓存内容15-30分钟", "INFO")
+            self.log("2. 您可能看到旧版本，这是正常的", "INFO")
+            self.log("3. 等待15-30分钟后刷新浏览器即可看到新内容", "INFO")
+            self.log("4. 或者手动清除Cloudflare缓存（需要账户权限）", "INFO")
+            self.log("5. 当前部署已成功，缓存会自动刷新", "SUCCESS")
             
             # 更新按钮状态为成功
             self.btn_verify.config(bg="green", fg="white", state="normal")
