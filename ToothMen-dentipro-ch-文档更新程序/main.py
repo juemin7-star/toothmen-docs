@@ -24,7 +24,7 @@ from logger import Logger
 class ToothMenDocsManager:
     def __init__(self, root):
         self.root = root
-        self.root.title("ToothMen文档更新程序 v1.0")
+        self.root.title("ToothMen-DentiPro-中文版·文档管理系统 v1.0")
         self.root.geometry("1400x1000")
         
         # 设置图标
@@ -97,7 +97,7 @@ class ToothMenDocsManager:
         main_frame.rowconfigure(3, weight=2)  # 日志区域（更多权重）
         
         # 创建顶部标题
-        title_label = ttk.Label(main_frame, text="ToothMen文档管理系统", 
+        title_label = ttk.Label(main_frame, text="ToothMen-DentiPro-中文版·文档管理系统", 
                                font=("Arial", 16, "bold"))
         title_label.grid(row=0, column=0, columnspan=3, pady=(0, 10))
         
@@ -652,11 +652,8 @@ sidebar_position: 1
     def update_sidebars(self):
         """更新侧边栏"""
         try:
-            # 获取生产文件列表
-            prod_files = list(self.right_listbox.get(0, tk.END))
-            
-            # 在后台线程中执行
-            thread = threading.Thread(target=self._update_sidebars_thread, args=(prod_files,))
+            # 在后台线程中执行，传递None让部署管理器自动获取实际文件
+            thread = threading.Thread(target=self._update_sidebars_thread, args=(None,))
             thread.daemon = True
             thread.start()
             
@@ -670,13 +667,13 @@ sidebar_position: 1
     def _update_sidebars_thread(self, prod_files):
         """更新侧边栏的线程函数"""
         try:
-            success = self.deployment_manager.update_sidebars(prod_files)
+            success, message = self.deployment_manager.update_sidebars(prod_files)
             
             if success:
-                self.log("侧边栏更新成功", "SUCCESS")
+                self.log(message, "SUCCESS")
                 self.update_button_state("更新侧边栏", "success")
             else:
-                self.log("侧边栏更新失败", "ERROR")
+                self.log(message, "ERROR")
                 self.update_button_state("更新侧边栏", "error")
                 
         except Exception as e:
@@ -738,8 +735,9 @@ sidebar_position: 1
                 self.log(output, "SUCCESS")
                 self.update_button_state("本地预览", "success")
                 
-                # 不自动打开浏览器，让用户手动访问
-                self.log("请手动访问 http://localhost:3000 确认预览效果", "INFO")
+                # 延迟3秒后自动打开浏览器
+                self.log("服务器已启动，3秒后自动打开浏览器...", "INFO")
+                self.root.after(3000, self.open_local_preview)
                 
             else:
                 self.log(f"本地预览启动失败:\n{output}", "ERROR")
@@ -806,6 +804,21 @@ sidebar_position: 1
             # 2秒后恢复原状
             self.root.after(2000, lambda: self.btn_verify.config(
                 bg="SystemButtonFace", fg="black", state="normal"))
+    
+    def open_local_preview(self):
+        """自动打开本地预览页面"""
+        try:
+            import webbrowser
+            # 打开主页，而不是具体的文档链接
+            url = "http://localhost:3000"
+            webbrowser.open(url)
+            
+            self.log(f"已自动打开浏览器访问: {url}", "SUCCESS")
+            self.log("注意：如果显示404，请清除浏览器缓存或使用无痕模式", "INFO")
+            
+        except Exception as e:
+            self.log(f"自动打开浏览器失败: {str(e)}", "ERROR")
+            self.log("请手动访问 http://localhost:3000", "INFO")
     
     def confirm_preview(self):
         """确认本地预览成功（用户手动确认，不检查服务器）"""

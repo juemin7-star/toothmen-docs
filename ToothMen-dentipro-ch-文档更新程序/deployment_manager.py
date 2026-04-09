@@ -42,17 +42,34 @@ class DeploymentManager:
             except:
                 pass
     
-    def update_sidebars(self, mdx_files):
+    def update_sidebars(self, mdx_files=None):
         """
         根据文件列表更新sidebars.js
         
         Args:
-            mdx_files: .mdx文件名列表（不含路径）
+            mdx_files: .mdx文件名列表（不含路径），如果为None则自动从docs文件夹获取
         
         Returns:
             (success, message)
         """
         try:
+            # 如果未提供文件列表，自动从docs文件夹获取
+            if mdx_files is None:
+                docs_folder = self.project_path / "docs"
+                if not docs_folder.exists():
+                    return False, f"docs文件夹不存在: {docs_folder}"
+                
+                # 获取所有.mdx文件
+                mdx_files = []
+                for file_path in docs_folder.glob("*.mdx"):
+                    mdx_files.append(file_path.name)
+                
+                if not mdx_files:
+                    return False, "docs文件夹中没有.mdx文件"
+                
+                # 按文件名排序
+                mdx_files.sort()
+            
             # 生成sidebars.js内容
             content = self.generate_sidebars_content(mdx_files)
             

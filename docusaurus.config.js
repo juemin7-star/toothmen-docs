@@ -79,7 +79,7 @@ trailingSlash: false,
         items: [
           {
             type: 'doc',
-            docId: 'NEW-26040801-补丁',
+            docId: 'NEW-26040902',
             position: 'left',
             label: '文档',
           },
