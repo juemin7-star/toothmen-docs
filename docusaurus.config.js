@@ -56,6 +56,22 @@ trailingSlash: false,
     ],
   ],
 
+  // 添加客户端重定向插件
+  plugins: [
+    [
+      '@docusaurus/plugin-client-redirects',
+      {
+        redirects: [
+          // 防止重定向到不存在的文档
+          {
+            from: '/docs/NEW-26040801-补丁',
+            to: '/',
+          },
+        ],
+      },
+    ],
+  ],
+
   themeConfig:
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
     ({
