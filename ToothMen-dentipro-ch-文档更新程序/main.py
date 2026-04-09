@@ -115,12 +115,12 @@ class ToothMenDocsManager:
         # 文件管理框架
         file_frame = ttk.LabelFrame(parent, text="文件管理", padding="10")
         file_frame.grid(row=1, column=0, columnspan=3, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(0, 10))
-        file_frame.columnconfigure(0, weight=1)
-        file_frame.columnconfigure(1, weight=0)
-        file_frame.columnconfigure(2, weight=1)
+        file_frame.columnconfigure(0, weight=2)  # 左侧文件夹（变窄）
+        file_frame.columnconfigure(1, weight=0)  # 按钮框（固定宽度）
+        file_frame.columnconfigure(2, weight=3)  # 右侧文件夹（保持原宽度）
         file_frame.rowconfigure(0, weight=1)
         
-        # 左侧：测试中转文件夹
+        # 左侧：测试中转文件夹（变窄）
         left_frame = ttk.Frame(file_frame)
         left_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), padx=(0, 5))
         left_frame.columnconfigure(0, weight=1)
@@ -151,7 +151,7 @@ class ToothMenDocsManager:
         left_list_frame.rowconfigure(0, weight=1)
         
         self.left_listbox = tk.Listbox(left_list_frame, selectmode=tk.SINGLE, 
-                                      font=("Consolas", 10), height=15)
+                                      font=("Consolas", 10), height=15, width=30)  # 设置固定宽度
         self.left_listbox.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         
         left_scrollbar = ttk.Scrollbar(left_list_frame, orient=tk.VERTICAL, 
@@ -162,34 +162,40 @@ class ToothMenDocsManager:
         # 绑定双击事件
         self.left_listbox.bind('<Double-Button-1>', self.open_file_editor)
         
-        # 中间：文件操作按钮
-        arrow_frame = ttk.Frame(file_frame)
-        arrow_frame.grid(row=0, column=1, sticky=(tk.N, tk.S), padx=10)
+        # 中间：按钮框（与左右文件框高度中央对齐）
+        button_box = ttk.LabelFrame(file_frame, text="文件操作", padding="10")
+        button_box.grid(row=0, column=1, sticky=(tk.N, tk.S), padx=10)
         
-        # 上下移动按钮框架（用于生产文件夹）
-        move_frame = ttk.Frame(arrow_frame)
-        move_frame.pack(pady=10)
+        # 使用网格布局确保按钮垂直居中
+        button_box.rowconfigure(0, weight=1)
+        button_box.rowconfigure(1, weight=0)
+        button_box.rowconfigure(2, weight=0)
+        button_box.rowconfigure(3, weight=0)
+        button_box.rowconfigure(4, weight=0)
+        button_box.rowconfigure(5, weight=1)
         
         # 上移按钮
-        tk.Button(move_frame, text="↑", width=3,
+        tk.Button(button_box, text="↑", width=5,
                  command=self.move_up,
-                 bg="SystemButtonFace", fg="black", relief="raised", bd=2).pack(pady=2)
+                 bg="SystemButtonFace", fg="black", relief="raised", bd=2).grid(row=1, column=0, pady=5)
         
         # 下移按钮
-        tk.Button(move_frame, text="↓", width=3,
+        tk.Button(button_box, text="↓", width=5,
                  command=self.move_down,
-                 bg="SystemButtonFace", fg="black", relief="raised", bd=2).pack(pady=2)
+                 bg="SystemButtonFace", fg="black", relief="raised", bd=2).grid(row=2, column=0, pady=5)
         
         # 分隔线
-        ttk.Separator(arrow_frame, orient='horizontal').pack(fill='x', pady=10)
+        ttk.Separator(button_box, orient='horizontal').grid(row=3, column=0, sticky=(tk.W, tk.E), pady=10)
         
-        # 左右交换箭头
-        tk.Button(arrow_frame, text="→", width=3, 
+        # 右移按钮
+        tk.Button(button_box, text="→", width=5, 
                  command=self.move_to_prod,
-                 bg="SystemButtonFace", fg="black", relief="raised", bd=2).pack(pady=5)
-        tk.Button(arrow_frame, text="←", width=3, 
+                 bg="SystemButtonFace", fg="black", relief="raised", bd=2).grid(row=4, column=0, pady=5)
+        
+        # 左移按钮
+        tk.Button(button_box, text="←", width=5, 
                  command=self.move_to_test,
-                 bg="SystemButtonFace", fg="black", relief="raised", bd=2).pack(pady=5)
+                 bg="SystemButtonFace", fg="black", relief="raised", bd=2).grid(row=5, column=0, pady=5)
         
         # 右侧：生产文件夹
         right_frame = ttk.Frame(file_frame)
@@ -210,7 +216,7 @@ class ToothMenDocsManager:
         right_list_frame.rowconfigure(0, weight=1)
         
         self.right_listbox = tk.Listbox(right_list_frame, selectmode=tk.SINGLE,
-                                       font=("Consolas", 10), height=15)
+                                       font=("Consolas", 10), height=15, width=40)  # 设置固定宽度
         self.right_listbox.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         
         right_scrollbar = ttk.Scrollbar(right_list_frame, orient=tk.VERTICAL,
@@ -253,12 +259,6 @@ class ToothMenDocsManager:
                                    command=self.verify_deployment, width=15,
                                    bg="SystemButtonFace", fg="black", relief="raised", bd=2)
         self.btn_verify.pack(side=tk.LEFT, padx=5)
-        
-        # 调试按钮（独立，一直可用）
-        self.btn_debug = tk.Button(control_frame, text="🔧 调试工具", 
-                                  command=self.test_network_connection, width=15,
-                                  bg="SystemButtonFace", fg="black", relief="raised", bd=2)
-        self.btn_debug.pack(side=tk.LEFT, padx=5)
         
         # 分隔线
         ttk.Separator(deploy_frame, orient='horizontal').grid(row=1, column=0, columnspan=6, sticky=(tk.W, tk.E), pady=5)
