@@ -3,8 +3,8 @@ const sidebars = {
   tutorialSidebar: [
     {
       type: 'doc',
-      id: 'NEW-26040801-补丁',
-      label: 'NEW-26040801-补丁',
+      id: 'NEW-26040902',
+      label: 'NEW-26040902',
     },
     {
       type: 'doc',
@@ -13,8 +13,8 @@ const sidebars = {
     },
     {
       type: 'doc',
-      id: 'NEW-26040902',
-      label: 'NEW-26040902',
+      id: 'NEW-26040801-补丁',
+      label: 'NEW-26040801-补丁',
     },
   ],
 };
