@@ -254,6 +254,12 @@ class ToothMenDocsManager:
                                    bg="SystemButtonFace", fg="black", relief="raised", bd=2)
         self.btn_verify.pack(side=tk.LEFT, padx=5)
         
+        # 调试按钮（独立，一直可用）
+        self.btn_debug = tk.Button(control_frame, text="🔧 调试工具", 
+                                  command=self.test_network_connection, width=15,
+                                  bg="SystemButtonFace", fg="black", relief="raised", bd=2)
+        self.btn_debug.pack(side=tk.LEFT, padx=5)
+        
         # 分隔线
         ttk.Separator(deploy_frame, orient='horizontal').grid(row=1, column=0, columnspan=6, sticky=(tk.W, tk.E), pady=5)
         
@@ -286,7 +292,7 @@ class ToothMenDocsManager:
         """创建日志区域"""
         # 日志框架
         log_frame = ttk.LabelFrame(parent, text="执行日志", padding="10")
-        log_frame.grid(row=3, column=0, columnspan=3, sticky=(tk.W, tk.E, tk.N, tk.S))
+        log_frame.grid(row=3, column=0, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S))
         log_frame.columnconfigure(0, weight=1)
         log_frame.rowconfigure(0, weight=1)
         
@@ -309,6 +315,36 @@ class ToothMenDocsManager:
         tk.Button(log_control_frame, text="复制日志", 
                  command=self.copy_log,
                  bg="SystemButtonFace", fg="black", relief="raised", bd=2).pack(side=tk.LEFT, padx=2)
+        
+        # 调试面板框架
+        debug_frame = ttk.LabelFrame(parent, text="🔧 调试工具", padding="10")
+        debug_frame.grid(row=3, column=2, sticky=(tk.W, tk.E, tk.N, tk.S), padx=(10, 0))
+        debug_frame.columnconfigure(0, weight=1)
+        
+        # 调试按钮
+        debug_buttons = [
+            ("🌐 测试网络连接", self.test_network_connection),
+            ("🔍 检查Git状态", self.check_git_status),
+            ("📊 查看Git日志", self.show_git_log),
+            ("🔄 手动推送Git", self.manual_git_push),
+            ("🧹 清除npm缓存", self.clear_npm_cache),
+            ("📁 打开项目文件夹", self.open_project_folder),
+            ("⚙️ 检查配置", self.check_config),
+            ("📋 复制错误信息", self.copy_error_info),
+        ]
+        
+        for i, (text, command) in enumerate(debug_buttons):
+            btn = tk.Button(
+                debug_frame,
+                text=text,
+                command=command,
+                bg="SystemButtonFace",
+                fg="black",
+                width=20,
+                relief="raised",
+                bd=2
+            )
+            btn.grid(row=i, column=0, pady=5, sticky="ew")
     
     def create_tooltip(self, widget, text):
         """创建工具提示"""
@@ -825,6 +861,250 @@ sidebar_position: 1
         except Exception as e:
             self.log(f"自动打开浏览器失败: {str(e)}", "ERROR")
             self.log("请手动访问 http://localhost:3000", "INFO")
+    
+    # ==================== 调试工具方法 ====================
+    
+    def test_network_connection(self):
+        """测试网络连接"""
+        self.log("正在测试网络连接...", "INFO")
+        
+        import subprocess
+        import threading
+        
+        def _test_network():
+            try:
+                # 测试ping GitHub
+                self.log("测试ping github.com...", "INFO")
+                result = subprocess.run(
+                    ["ping", "-n", "4", "github.com"],
+                    capture_output=True,
+                    text=True,
+                    encoding='gbk'
+                )
+                
+                if result.returncode == 0:
+                    self.log("✅ Ping测试成功", "SUCCESS")
+                    # 提取关键信息
+                    for line in result.stdout.split('\n'):
+                        if "数据包:" in line or "Packets:" in line:
+                            self.log(f"网络状态: {line.strip()}", "INFO")
+                        if "平均 =" in line or "Average =" in line:
+                            self.log(f"网络延迟: {line.strip()}", "INFO")
+                else:
+                    self.log("❌ Ping测试失败", "ERROR")
+                    self.log(f"错误信息: {result.stderr}", "ERROR")
+                
+                # 测试HTTPS访问
+                self.log("测试HTTPS访问...", "INFO")
+                import urllib.request
+                try:
+                    response = urllib.request.urlopen("https://github.com", timeout=10)
+                    self.log(f"✅ HTTPS访问成功 (状态码: {response.status})", "SUCCESS")
+                except Exception as e:
+                    self.log(f"❌ HTTPS访问失败: {str(e)}", "ERROR")
+                    
+            except Exception as e:
+                self.log(f"网络测试异常: {str(e)}", "ERROR")
+        
+        # 在新线程中执行网络测试
+        thread = threading.Thread(target=_test_network)
+        thread.daemon = True
+        thread.start()
+    
+    def check_git_status(self):
+        """检查Git状态"""
+        self.log("正在检查Git状态...", "INFO")
+        
+        import threading
+        
+        def _check_git():
+            try:
+                success, output = self.deployment_manager.run_command(
+                    self.deployment_manager.git_path,
+                    ["status", "--short"]
+                )
+                
+                if success:
+                    if output.strip():
+                        self.log("Git状态:", "INFO")
+                        self.log(output, "INFO")
+                    else:
+                        self.log("✅ 工作区干净，没有未提交的更改", "SUCCESS")
+                else:
+                    self.log(f"❌ Git状态检查失败: {output}", "ERROR")
+                    
+            except Exception as e:
+                self.log(f"Git状态检查异常: {str(e)}", "ERROR")
+        
+        thread = threading.Thread(target=_check_git)
+        thread.daemon = True
+        thread.start()
+    
+    def show_git_log(self):
+        """查看Git日志"""
+        self.log("正在获取Git提交历史...", "INFO")
+        
+        import threading
+        
+        def _show_log():
+            try:
+                success, output = self.deployment_manager.run_command(
+                    self.deployment_manager.git_path,
+                    ["log", "--oneline", "-10"]
+                )
+                
+                if success:
+                    self.log("最近10次提交:", "INFO")
+                    self.log(output, "INFO")
+                else:
+                    self.log(f"❌ 获取Git日志失败: {output}", "ERROR")
+                    
+            except Exception as e:
+                self.log(f"获取Git日志异常: {str(e)}", "ERROR")
+        
+        thread = threading.Thread(target=_show_log)
+        thread.daemon = True
+        thread.start()
+    
+    def manual_git_push(self):
+        """手动推送Git"""
+        self.log("正在手动推送Git...", "INFO")
+        
+        import threading
+        
+        def _manual_push():
+            try:
+                # 先添加所有更改
+                success1, output1 = self.deployment_manager.run_command(
+                    self.deployment_manager.git_path,
+                    ["add", "."]
+                )
+                
+                if not success1:
+                    self.log(f"❌ Git添加失败: {output1}", "ERROR")
+                    return
+                
+                # 提交
+                import datetime
+                commit_msg = f"手动推送: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+                success2, output2 = self.deployment_manager.run_command(
+                    self.deployment_manager.git_path,
+                    ["commit", "-m", commit_msg]
+                )
+                
+                if not success2:
+                    # 如果没有更改可提交
+                    if "nothing to commit" in output2.lower():
+                        self.log("⚠️ 没有需要提交的更改", "WARNING")
+                    else:
+                        self.log(f"❌ Git提交失败: {output2}", "ERROR")
+                        return
+                
+                # 推送
+                success3, output3 = self.deployment_manager.run_command(
+                    self.deployment_manager.git_path,
+                    ["push", "origin", "master"]
+                )
+                
+                if success3:
+                    self.log("✅ 手动推送成功", "SUCCESS")
+                    self.log(output3, "INFO")
+                else:
+                    self.log(f"❌ 手动推送失败: {output3}", "ERROR")
+                    
+            except Exception as e:
+                self.log(f"手动推送异常: {str(e)}", "ERROR")
+        
+        thread = threading.Thread(target=_manual_push)
+        thread.daemon = True
+        thread.start()
+    
+    def clear_npm_cache(self):
+        """清除npm缓存"""
+        self.log("正在清除npm缓存...", "INFO")
+        
+        import threading
+        
+        def _clear_cache():
+            try:
+                success, output = self.deployment_manager.run_command(
+                    self.deployment_manager.npm_path,
+                    ["cache", "clean", "--force"]
+                )
+                
+                if success:
+                    self.log("✅ npm缓存清除成功", "SUCCESS")
+                    self.log(output, "INFO")
+                else:
+                    self.log(f"❌ npm缓存清除失败: {output}", "ERROR")
+                    
+            except Exception as e:
+                self.log(f"清除npm缓存异常: {str(e)}", "ERROR")
+        
+        thread = threading.Thread(target=_clear_cache)
+        thread.daemon = True
+        thread.start()
+    
+    def open_project_folder(self):
+        """打开项目文件夹"""
+        try:
+            import os
+            import subprocess
+            
+            project_path = str(self.deployment_manager.project_path)
+            self.log(f"正在打开项目文件夹: {project_path}", "INFO")
+            
+            if os.path.exists(project_path):
+                subprocess.run(["explorer", project_path], shell=True)
+                self.log("✅ 已打开项目文件夹", "SUCCESS")
+            else:
+                self.log(f"❌ 文件夹不存在: {project_path}", "ERROR")
+                
+        except Exception as e:
+            self.log(f"打开文件夹异常: {str(e)}", "ERROR")
+    
+    def check_config(self):
+        """检查配置"""
+        self.log("正在检查配置...", "INFO")
+        
+        try:
+            config = self.deployment_manager.config
+            
+            self.log("当前配置:", "INFO")
+            self.log(f"项目路径: {config.get('project_path', '未设置')}", "INFO")
+            self.log(f"测试文件夹: {config.get('test_folder', '未设置')}", "INFO")
+            self.log(f"生产文件夹: {config.get('production_folder', '未设置')}", "INFO")
+            self.log(f"npm路径: {config.get('npm_path', '未设置')}", "INFO")
+            self.log(f"git路径: {config.get('git_path', '未设置')}", "INFO")
+            
+            # 检查路径是否存在
+            import os
+            project_path = config.get('project_path', '')
+            if project_path and os.path.exists(project_path):
+                self.log("✅ 项目路径存在", "SUCCESS")
+            else:
+                self.log("❌ 项目路径不存在或未设置", "ERROR")
+                
+        except Exception as e:
+            self.log(f"检查配置异常: {str(e)}", "ERROR")
+    
+    def copy_error_info(self):
+        """复制错误信息到剪贴板"""
+        try:
+            import tkinter as tk
+            
+            # 获取最后10行日志
+            log_content = self.log_text.get("end-10l", "end")
+            
+            if log_content.strip():
+                self.root.clipboard_clear()
+                self.root.clipboard_append(log_content)
+                self.log("✅ 已复制最后10行日志到剪贴板", "SUCCESS")
+            else:
+                self.log("⚠️ 日志为空，没有可复制的内容", "WARNING")
+                
+        except Exception as e:
+            self.log(f"复制错误信息异常: {str(e)}", "ERROR")
     
     def confirm_preview(self):
         """确认本地预览成功（用户手动确认，不检查服务器）"""
