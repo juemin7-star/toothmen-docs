@@ -25,7 +25,7 @@ class ToothMenDocsManager:
     def __init__(self, root):
         self.root = root
         self.root.title("ToothMen文档更新程序 v1.0")
-        self.root.geometry("1200x800")
+        self.root.geometry("1400x1000")
         
         # 设置图标
         try:
@@ -151,7 +151,7 @@ class ToothMenDocsManager:
         left_list_frame.rowconfigure(0, weight=1)
         
         self.left_listbox = tk.Listbox(left_list_frame, selectmode=tk.SINGLE, 
-                                      font=("Consolas", 10), height=8)
+                                      font=("Consolas", 10), height=15)
         self.left_listbox.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         
         left_scrollbar = ttk.Scrollbar(left_list_frame, orient=tk.VERTICAL, 
@@ -210,7 +210,7 @@ class ToothMenDocsManager:
         right_list_frame.rowconfigure(0, weight=1)
         
         self.right_listbox = tk.Listbox(right_list_frame, selectmode=tk.SINGLE,
-                                       font=("Consolas", 10), height=8)
+                                       font=("Consolas", 10), height=15)
         self.right_listbox.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         
         right_scrollbar = ttk.Scrollbar(right_list_frame, orient=tk.VERTICAL,
@@ -248,6 +248,12 @@ class ToothMenDocsManager:
                                 bg="SystemButtonFace", fg="black", relief="raised", bd=2)
         self.btn_end.pack(side=tk.LEFT, padx=5)
         
+        # 验证部署按钮（独立，一直可用）
+        self.btn_verify = tk.Button(control_frame, text="🌐 验证部署", 
+                                   command=self.verify_deployment, width=15,
+                                   bg="SystemButtonFace", fg="black", relief="raised", bd=2)
+        self.btn_verify.pack(side=tk.LEFT, padx=5)
+        
         # 分隔线
         ttk.Separator(deploy_frame, orient='horizontal').grid(row=1, column=0, columnspan=6, sticky=(tk.W, tk.E), pady=5)
         
@@ -258,7 +264,6 @@ class ToothMenDocsManager:
             ("本地预览", self.local_preview, "启动本地开发服务器预览"),
             ("确认预览", self.confirm_preview, "手动确认本地预览成功"),
             ("自动部署", self.auto_deploy, "执行Git推送和Cloudflare部署"),
-            ("验证部署", self.verify_deployment, "打开公网文档网站验证部署结果"),
         ]
         
         # 创建步骤按钮
@@ -288,7 +293,7 @@ class ToothMenDocsManager:
         # 日志文本框
         self.log_text = scrolledtext.ScrolledText(log_frame, wrap=tk.WORD, 
                                                  font=("Consolas", 9),
-                                                 height=25)
+                                                 height=35)
         self.log_text.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         
         # 日志控制按钮
@@ -694,6 +699,10 @@ sidebar_position: 1
     def _local_build_test_thread(self):
         """本地构建测试的线程函数"""
         try:
+            # 显示构建过程开始
+            self.log("正在执行本地构建测试，请稍后...", "INFO")
+            self.log("步骤1: 清除缓存...", "INFO")
+            
             success, output = self.deployment_manager.local_build_test()
             
             if success:
@@ -770,9 +779,10 @@ sidebar_position: 1
             self.update_button_state("自动部署", "error")
     
     def verify_deployment(self):
-        """验证部署结果"""
+        """验证部署结果（独立按钮，一直可用）"""
         try:
-            self.update_button_state("验证部署", "running")
+            # 更新按钮状态为运行中
+            self.btn_verify.config(bg="yellow", fg="black", state="normal")
             
             # 打开公网文档网站
             import webbrowser
@@ -780,11 +790,22 @@ sidebar_position: 1
             webbrowser.open(website_url)
             
             self.log(f"已打开公网文档网站: {website_url}", "SUCCESS")
-            self.update_button_state("验证部署", "success")
+            
+            # 更新按钮状态为成功
+            self.btn_verify.config(bg="green", fg="white", state="normal")
+            
+            # 2秒后恢复原状
+            self.root.after(2000, lambda: self.btn_verify.config(
+                bg="SystemButtonFace", fg="black", state="normal"))
             
         except Exception as e:
             self.log(f"验证部署失败: {str(e)}", "ERROR")
-            self.update_button_state("验证部署", "error")
+            # 更新按钮状态为错误
+            self.btn_verify.config(bg="red", fg="white", state="normal")
+            
+            # 2秒后恢复原状
+            self.root.after(2000, lambda: self.btn_verify.config(
+                bg="SystemButtonFace", fg="black", state="normal"))
     
     def confirm_preview(self):
         """确认本地预览成功（用户手动确认，不检查服务器）"""
@@ -876,8 +897,8 @@ sidebar_position: 1
             # 找到当前按钮的索引
             for i, (name, _, _) in enumerate(self.deployment_buttons):
                 if name == button_name:
-                    # 如果是自动部署或验证部署成功，2秒后结束流程
-                    if button_name in ["自动部署", "验证部署"]:
+                    # 如果是自动部署成功，2秒后结束流程
+                    if button_name == "自动部署":
                         self.root.after(2000, self.end_deployment_flow)
                     else:
                         # 解锁下一个步骤
