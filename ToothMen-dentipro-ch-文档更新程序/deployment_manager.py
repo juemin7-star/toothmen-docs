@@ -207,6 +207,58 @@ class DeploymentManager:
         except Exception as e:
             return False, f"命令执行失败: {str(e)}"
     
+    def check_and_install_dependencies(self):
+        """
+        检查并安装必要的npm依赖（特别是搜索插件）
+        
+        Returns:
+            (success, message)
+        """
+        try:
+            import json
+            from pathlib import Path
+            
+            # 检查缓存文件，避免重复检查
+            cache_file = self.project_path / ".search_plugin_installed"
+            if cache_file.exists():
+                return True, "搜索插件已安装（缓存）"
+            
+            # 检查package.json是否存在
+            package_json_path = self.project_path / "package.json"
+            if not package_json_path.exists():
+                return False, "package.json文件不存在"
+            
+            # 读取package.json
+            with open(package_json_path, 'r', encoding='utf-8') as f:
+                package_data = json.load(f)
+            
+            dependencies = package_data.get("dependencies", {})
+            dev_dependencies = package_data.get("devDependencies", {})
+            
+            # 检查是否已安装搜索插件
+            if '@easyops-cn/docusaurus-search-local' not in dependencies and \
+               '@easyops-cn/docusaurus-search-local' not in dev_dependencies:
+                
+                # 安装搜索插件
+                success, output = self.run_command(
+                    self.npm_path, 
+                    ["install", "@easyops-cn/docusaurus-search-local"]
+                )
+                
+                if success:
+                    # 创建缓存文件
+                    cache_file.touch()
+                    return True, "搜索插件安装成功"
+                else:
+                    return False, f"搜索插件安装失败: {output}"
+            else:
+                # 已安装，创建缓存文件
+                cache_file.touch()
+                return True, "搜索插件已安装"
+            
+        except Exception as e:
+            return False, f"依赖检查异常: {str(e)}"
+    
     def local_build_test(self):
         """
         执行本地构建测试
@@ -215,6 +267,11 @@ class DeploymentManager:
             (success, output)
         """
         try:
+            # 0. 检查并安装依赖
+            dep_success, dep_message = self.check_and_install_dependencies()
+            if not dep_success:
+                return False, f"依赖检查失败:\n{dep_message}"
+            
             # 1. 清除缓存
             success1, output1 = self.run_command(self.npm_path, ["run", "clear"])
             

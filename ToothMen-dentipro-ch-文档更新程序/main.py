@@ -130,20 +130,27 @@ class ToothMenDocsManager:
         # 左侧标题和按钮
         left_header = ttk.Frame(left_frame)
         left_header.grid(row=0, column=0, sticky=(tk.W, tk.E), pady=(0, 5))
+        left_header.columnconfigure(0, weight=0)  # 标题列（固定宽度）
+        left_header.columnconfigure(1, weight=1)  # 空白列（占据空间）
+        left_header.columnconfigure(2, weight=0)  # 按钮列（固定宽度）
         
-        ttk.Label(left_header, text="测试中转文件夹", font=("Arial", 10, "bold")).pack(side=tk.LEFT)
+        ttk.Label(left_header, text="测试中转文件夹", font=("Arial", 10, "bold")).grid(row=0, column=0, sticky=tk.W)
         
+        # 空白标签用于占据空间，让按钮向左移动
+        ttk.Label(left_header, text="").grid(row=0, column=1, sticky=(tk.W, tk.E))
+        
+        # 按钮框架
         btn_frame = ttk.Frame(left_header)
-        btn_frame.pack(side=tk.RIGHT)
+        btn_frame.grid(row=0, column=2, sticky=tk.E, padx=(0, 0))
         
-        tk.Button(btn_frame, text="新建", width=8, command=self.create_new_file,
-                 bg="SystemButtonFace", fg="black", relief="raised", bd=2).pack(side=tk.LEFT, padx=2)
-        tk.Button(btn_frame, text="删除", width=8, command=self.delete_selected_file,
-                 bg="SystemButtonFace", fg="black", relief="raised", bd=2).pack(side=tk.LEFT, padx=2)
-        tk.Button(btn_frame, text="重命名", width=8, command=self.rename_selected_file,
-                 bg="SystemButtonFace", fg="black", relief="raised", bd=2).pack(side=tk.LEFT, padx=2)
-        tk.Button(btn_frame, text="刷新", width=8, command=self.refresh_file_lists,
-                 bg="SystemButtonFace", fg="black", relief="raised", bd=2).pack(side=tk.LEFT, padx=2)
+        tk.Button(btn_frame, text="新建", width=6, command=self.create_new_file,
+                 bg="SystemButtonFace", fg="black", relief="raised", bd=2).pack(side=tk.LEFT, padx=0)
+        tk.Button(btn_frame, text="删除", width=6, command=self.delete_selected_file,
+                 bg="SystemButtonFace", fg="black", relief="raised", bd=2).pack(side=tk.LEFT, padx=0)
+        tk.Button(btn_frame, text="重命名", width=6, command=self.rename_selected_file,
+                 bg="SystemButtonFace", fg="black", relief="raised", bd=2).pack(side=tk.LEFT, padx=0)
+        tk.Button(btn_frame, text="刷新", width=6, command=self.refresh_file_lists,
+                 bg="SystemButtonFace", fg="black", relief="raised", bd=2).pack(side=tk.LEFT, padx=0)
         
         # 左侧文件列表
         left_list_frame = ttk.Frame(left_frame)
@@ -339,9 +346,7 @@ class ToothMenDocsManager:
             ("🔧 Git连接诊断", self.diagnose_git_connection),
             ("⚡ 切换到SSH", self.switch_to_ssh),
             ("🧹 清除npm缓存", self.clear_npm_cache),
-            ("📁 打开项目文件夹", self.open_project_folder),
             ("⚙️ 检查配置", self.check_config),
-            ("📋 复制错误信息", self.copy_error_info),
         ]
         
         for i, (text, command) in enumerate(debug_buttons):
@@ -892,7 +897,7 @@ sidebar_position: 1
         try:
             # 显示构建过程开始
             self.log("正在执行本地构建测试，请稍后...", "INFO")
-            self.log("步骤1: 清除缓存...", "INFO")
+            self.log("步骤0: 检查并安装依赖...", "INFO")
             
             success, output = self.deployment_manager.local_build_test()
             
@@ -1462,20 +1467,63 @@ sidebar_position: 1
         self.log("正在检查配置...", "INFO")
         
         try:
-            config = self.deployment_manager.config
+            # 使用主程序的config，而不是deployment_manager的config
+            config = self.config
             
             self.log("当前配置:", "INFO")
             self.log(f"项目路径: {config.get('project_path', '未设置')}", "INFO")
             self.log(f"测试文件夹: {config.get('test_folder', '未设置')}", "INFO")
-            self.log(f"生产文件夹: {config.get('production_folder', '未设置')}", "INFO")
+            self.log(f"生产文件夹: {config.get('prod_folder', '未设置')}", "INFO")
             self.log(f"npm路径: {config.get('npm_path', '未设置')}", "INFO")
             self.log(f"git路径: {config.get('git_path', '未设置')}", "INFO")
+            self.log(f"侧边栏路径: {config.get('sidebars_path', '未设置')}", "INFO")
             
             # 检查路径是否存在
             import os
             project_path = config.get('project_path', '')
             if project_path and os.path.exists(project_path):
                 self.log("✅ 项目路径存在", "SUCCESS")
+                
+                # 检查关键路径（相对于项目路径）
+                project_dir = Path(project_path)
+                
+                # 测试文件夹
+                test_folder_rel = config.get('test_folder', '')
+                if test_folder_rel:
+                    test_folder_abs = project_dir / test_folder_rel
+                    if test_folder_abs.exists():
+                        self.log(f"✅ 测试文件夹存在: {test_folder_abs}", "SUCCESS")
+                    else:
+                        self.log(f"❌ 测试文件夹不存在: {test_folder_abs}", "ERROR")
+                        self.log(f"  相对路径: {test_folder_rel}", "INFO")
+                else:
+                    self.log("❌ 测试文件夹未设置", "ERROR")
+                
+                # 生产文件夹
+                prod_folder_rel = config.get('prod_folder', '')
+                if prod_folder_rel:
+                    prod_folder_abs = project_dir / prod_folder_rel
+                    if prod_folder_abs.exists():
+                        self.log(f"✅ 生产文件夹存在: {prod_folder_abs}", "SUCCESS")
+                    else:
+                        self.log(f"❌ 生产文件夹不存在: {prod_folder_abs}", "ERROR")
+                        self.log(f"  相对路径: {prod_folder_rel}", "INFO")
+                else:
+                    self.log("❌ 生产文件夹未设置", "ERROR")
+                
+                # 侧边栏文件
+                sidebars_path_rel = config.get('sidebars_path', '')
+                if sidebars_path_rel:
+                    sidebars_path_abs = project_dir / sidebars_path_rel
+                    if sidebars_path_abs.exists():
+                        self.log(f"✅ 侧边栏文件存在: {sidebars_path_abs}", "SUCCESS")
+                        self.log(f"  说明: 这是Docusaurus的侧边栏配置文件，用于自动生成文档导航", "INFO")
+                    else:
+                        self.log(f"❌ 侧边栏文件不存在: {sidebars_path_abs}", "ERROR")
+                        self.log(f"  相对路径: {sidebars_path_rel}", "INFO")
+                        self.log(f"  说明: 这是Docusaurus的侧边栏配置文件，程序会自动创建", "INFO")
+                else:
+                    self.log("❌ 侧边栏文件未设置", "ERROR")
             else:
                 self.log("❌ 项目路径不存在或未设置", "ERROR")
                 

@@ -56,7 +56,7 @@ trailingSlash: false,
     ],
   ],
 
-  // 添加客户端重定向插件
+  // 添加插件
   plugins: [
     [
       '@docusaurus/plugin-client-redirects',
@@ -68,6 +68,15 @@ trailingSlash: false,
             to: '/',
           },
         ],
+      },
+    ],
+    [
+      '@easyops-cn/docusaurus-search-local',
+      {
+        // 中文搜索支持
+        language: ['en', 'zh'],
+        // 忽略文件
+        ignoreFiles: ['**/node_modules/**', '**/__tests__/**'],
       },
     ],
   ],
@@ -121,21 +130,21 @@ trailingSlash: false,
         theme: prismThemes.github,
         darkTheme: prismThemes.dracula,
       },
-      // Algolia DocSearch 配置
-      algolia: {
-        // Algolia 应用ID
-        appId: 'YOUR_APP_ID',
-        // 公开API密钥：可以安全提交到代码库
-        apiKey: 'YOUR_SEARCH_API_KEY',
-        // 索引名称
-        indexName: 'YOUR_INDEX_NAME',
-        // 搜索参数
-        searchParameters: {},
-        // 搜索页面路径
-        searchPagePath: 'search',
-        // 是否启用洞察功能
-        insights: false,
-      },
+      // Algolia DocSearch 配置（已禁用，使用本地搜索）
+      // algolia: {
+      //   // Algolia 应用ID
+      //   appId: 'YOUR_APP_ID',
+      //   // 公开API密钥：可以安全提交到代码库
+      //   apiKey: 'YOUR_SEARCH_API_KEY',
+      //   // 索引名称
+      //   indexName: 'YOUR_INDEX_NAME',
+      //   // 搜索参数
+      //   searchParameters: {},
+      //   // 搜索页面路径
+      //   searchPagePath: 'search',
+      //   // 是否启用洞察功能
+      //   insights: false,
+      // },
 
     }),
 };
