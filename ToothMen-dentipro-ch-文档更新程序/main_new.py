@@ -108,23 +108,22 @@ class ToothMenDocsManager:
         folder_frame = ttk.LabelFrame(parent, text="文档文件夹结构", padding="10")
         folder_frame.grid(row=1, column=0, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(0, 10))
         folder_frame.columnconfigure(0, weight=1)
-        folder_frame.columnconfigure(1, weight=0)  # 排序按钮列
+        folder_frame.columnconfigure(1, weight=0)  # 垂直滚动条列
+        folder_frame.columnconfigure(2, weight=0)  # 排序按钮列
         folder_frame.rowconfigure(0, weight=1)
         folder_frame.rowconfigure(1, weight=0)  # 水平滚动条行
         
-        # 创建Treeview显示文件夹结构
-        self.tree = ttk.Treeview(folder_frame, columns=("type", "count"), show="tree headings")
+        # 创建Treeview显示文件夹结构 - 只显示名称和类型，不显示数量
+        self.tree = ttk.Treeview(folder_frame, columns=("type"), show="tree headings")
         self.tree.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         
         # 设置标题
-        self.tree.heading("#0", text="文件/文件夹结构")
+        self.tree.heading("#0", text="文件/文件夹名称")
         self.tree.heading("type", text="类型")
-        self.tree.heading("count", text="数量")
         
-        # 设置列宽度 - 加大左侧按钮区域
-        self.tree.column("#0", width=650, minwidth=500)  # 稍微减小宽度，为按钮留空间
-        self.tree.column("type", width=120, minwidth=100)
-        self.tree.column("count", width=100, minwidth=80)
+        # 设置列宽度 - 缩小宽度，为按钮留出空间
+        self.tree.column("#0", width=400, minwidth=300)  # 缩小宽度
+        self.tree.column("type", width=80, minwidth=60)  # 缩小宽度
         
         # 垂直滚动条
         v_scrollbar = ttk.Scrollbar(folder_frame, orient=tk.VERTICAL, command=self.tree.yview)
