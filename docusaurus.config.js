@@ -77,6 +77,10 @@ trailingSlash: false,
         language: ['en', 'zh'],
         // 忽略文件
         ignoreFiles: ['**/node_modules/**', '**/__tests__/**'],
+        // 中文搜索优化 - 只使用已知支持的选项
+        hashed: true,
+        // 搜索结果数量
+        searchResultLimits: 10,
       },
     ],
   ],

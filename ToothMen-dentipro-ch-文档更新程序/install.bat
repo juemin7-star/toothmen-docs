@@ -1,4 +1,4 @@
-﻿@echo off
+@echo off
 chcp 65001 >nul
 echo ========================================
 echo   ToothMen文档管理系统 - 安装程序
