@@ -592,7 +592,8 @@ class ToothMenDocsManager:
                 lines.append(f"      items: [")
                 
                 for file_name in sorted_files:
-                    # 生成文档ID（文件夹名/清理后的文件名）
+                    # 生成文档ID（Docusaurus格式：文件夹名/文件名）
+                    # 例如：1-主程序安装说明.mdx → 程序安装说明/主程序安装说明
                     clean_file_name = self.clean_name(file_name)
                     doc_id = f"{self.clean_name(folder_name)}/{clean_file_name}"
                     lines.append(f"        '{doc_id}',")
@@ -683,6 +684,10 @@ class ToothMenDocsManager:
                 # 如果是在部署流程中，更新按钮状态
                 if self.deployment_started:
                     self.update_button_state("本地预览", "success")
+                
+                # 延迟3秒后自动打开浏览器
+                self.logger.info("服务器已启动，3秒后自动打开浏览器...")
+                self.root.after(3000, self.open_local_preview)
             else:
                 self.logger.error("启动本地预览失败")
                 self.logger.error("启动本地预览失败，请查看日志")
@@ -696,6 +701,48 @@ class ToothMenDocsManager:
             # 如果是在部署流程中，更新按钮状态
             if self.deployment_started:
                 self.update_button_state("本地预览", "error")
+    
+    def open_local_preview(self):
+        """自动打开本地预览页面"""
+        try:
+            import webbrowser
+            
+            # 方案1：打开网站首页（推荐）
+            # 用户访问网站时，应该先看到网站首页，而不是直接进入具体文档
+            url = "http://localhost:3000"
+            
+            # 同时显示可用的文档链接，方便用户快速访问
+            self.logger.info("已打开网站首页，可用文档链接:")
+            
+            # 从侧边栏中获取所有文档链接
+            sidebars_path = self.project_path / "sidebars.js"
+            if sidebars_path.exists():
+                try:
+                    with open(sidebars_path, 'r', encoding='utf-8') as f:
+                        sidebar_content = f.read()
+                    
+                    # 提取所有文档ID
+                    import re
+                    doc_ids = re.findall(r"'([^']+/[^']+)'", sidebar_content)
+                    
+                    if doc_ids:
+                        for doc_id in doc_ids:
+                            doc_url = f"http://localhost:3000/docs/{doc_id}"
+                            self.logger.info(f"  • {doc_id}: {doc_url}")
+                    else:
+                        self.logger.info("  • 未找到文档链接")
+                except Exception as e:
+                    self.logger.info(f"  • 读取侧边栏失败: {str(e)}")
+            else:
+                self.logger.info("  • 侧边栏文件不存在")
+            
+            webbrowser.open(url)
+            self.logger.success(f"已自动打开浏览器访问网站首页: {url}")
+            self.logger.info("从首页可以导航到具体文档")
+            
+        except Exception as e:
+            self.logger.error(f"自动打开浏览器失败: {str(e)}")
+            self.logger.info("请手动访问: http://localhost:3000")
     
     def auto_deploy(self):
         """自动部署"""

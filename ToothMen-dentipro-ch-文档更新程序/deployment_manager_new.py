@@ -165,7 +165,8 @@ class DeploymentManager:
                 lines.append(f"      items: [")
                 
                 for file_name in sorted_files:
-                    # 生成文档ID（文件夹名/清理后的文件名）
+                    # 生成文档ID（Docusaurus格式：文件夹名/文件名）
+                    # 例如：1-主程序安装说明.mdx → 程序安装说明/主程序安装说明
                     clean_file_name = self.clean_name(file_name)
                     doc_id = f"{self.clean_name(folder_name)}/{clean_file_name}"
                     lines.append(f"        '{doc_id}',")
@@ -511,6 +512,17 @@ class DeploymentManager:
                 
                 if success3:
                     break
+                else:
+                    # 检查是否是"already up to date"的情况
+                    if "already up to date" in output3.lower():
+                        output_lines.append("提示: 远程仓库已经是最新状态")
+                        success3 = True
+                        break
+                    # 检查是否是"non-fast-forward"错误
+                    elif "non-fast-forward" in output3.lower():
+                        output_lines.append("⚠️ 推送失败: 远程有新的提交")
+                        output_lines.append("建议先执行: git pull --rebase origin master")
+                        break
             
             if not success3:
                 # 推送失败，但提交已保存在本地
@@ -531,7 +543,7 @@ class DeploymentManager:
     
     def verify_deployment(self):
         """
-        验证部署状态 - 打开部署好的网页
+        验证部署状态 - 检查网站可访问性
         
         Returns:
             (success, output)
@@ -562,17 +574,43 @@ class DeploymentManager:
             output_lines.append("📱 网站地址: https://docs.toothmen.com")
             output_lines.append("⏱️ 通常需要1-3分钟完成部署")
             
-            # 4. 打开部署好的网页
-            output_lines.append("\n=== 打开部署网页 ===")
+            # 4. 测试网站可访问性
+            output_lines.append("\n=== 测试网站可访问性 ===")
             try:
-                import webbrowser
-                # 打开部署好的网站
+                import urllib.request
+                import urllib.error
+                
                 url = "https://docs.toothmen.com"
-                webbrowser.open(url)
-                output_lines.append(f"✅ 已打开浏览器访问: {url}")
-                output_lines.append("请查看网页是否正常显示")
+                try:
+                    # 设置超时时间为10秒
+                    response = urllib.request.urlopen(url, timeout=10)
+                    status_code = response.getcode()
+                    
+                    if status_code == 200:
+                        output_lines.append(f"✅ 网站可访问: {url} (状态码: {status_code})")
+                        output_lines.append("网站正常运行")
+                        
+                        # 打开网站
+                        import webbrowser
+                        webbrowser.open(url)
+                        output_lines.append(f"✅ 已打开浏览器访问: {url}")
+                    else:
+                        output_lines.append(f"⚠️ 网站返回异常状态码: {status_code}")
+                        output_lines.append(f"请稍后再试或检查Cloudflare Pages部署状态")
+                        
+                except urllib.error.HTTPError as e:
+                    output_lines.append(f"⚠️ HTTP错误: {e.code} - {e.reason}")
+                    output_lines.append(f"网站可能正在构建中，请稍后再试")
+                    
+                except urllib.error.URLError as e:
+                    output_lines.append(f"⚠️ 网络连接错误: {str(e)}")
+                    output_lines.append(f"网站可能尚未部署或网络问题")
+                    
+                except Exception as e:
+                    output_lines.append(f"⚠️ 访问网站时出错: {str(e)}")
+                    
             except Exception as e:
-                output_lines.append(f"⚠️ 自动打开浏览器失败: {str(e)}")
+                output_lines.append(f"⚠️ 测试网站可访问性失败: {str(e)}")
                 output_lines.append(f"请手动访问: https://docs.toothmen.com")
             
             return True, "\n".join(output_lines)
