@@ -1,0 +1,54 @@
+{
+  "project_path": "D:\\magicdental开发备忘录\\toothmen-官方说明文档系统\\ToothMen-Docs-Simple",
+  "docs_folder": "docs",
+  "sidebars_path": "sidebars.js",
+  "npm_path": "npm",
+  "git_path": "C:\\Program Files\\Git\\cmd\\git.exe",
+  "auto_refresh": true,
+  "log_level": "INFO",
+  "log_file": "toothmen_docs_manager.log",
+  
+  "folder_classification": {
+    "reverse_order_folders": ["补丁更新日志", "patch-notes", "更新记录", "changelog"],
+    "sort_by_number_prefix": true,
+    "clean_number_prefix": true,
+    "default_collapsed": true
+  },
+  
+  "ui": {
+    "theme": "default",
+    "font_size": 10,
+    "window_width": 1400,
+    "window_height": 1000,
+    "treeview_width": 600,
+    "show_file_count": true
+  },
+  
+  "deployment": {
+    "auto_commit": true,
+    "commit_message_prefix": "自动部署: ",
+    "push_to_remote": true,
+    "remote_name": "origin",
+    "branch_name": "master",
+    "wait_for_cloudflare": true,
+    "cloudflare_check_interval": 30,
+    "check_dependencies": true
+  },
+  
+  "validation": {
+    "check_mdx_syntax": true,
+    "validate_folder_structure": true,
+    "check_file_naming": true,
+    "max_file_size_mb": 10
+  },
+  
+  "search_plugin": {
+    "name": "@easyops-cn/docusaurus-search-local",
+    "config": {
+      "language": ["en", "zh"],
+      "ignoreFiles": ["**/node_modules/**", "**/__tests__/**"],
+      "hashed": true,
+      "searchResultLimits": 10
+    }
+  }
+}

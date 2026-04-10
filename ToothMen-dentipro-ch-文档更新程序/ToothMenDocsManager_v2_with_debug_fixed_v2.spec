@@ -1,11 +1,12 @@
-﻿# -*- mode: python ; coding: utf-8 -*-
+# -*- mode: python ; coding: utf-8 -*-
+
 
 a = Analysis(
-    ['main.py'],
+    ['main_new.py'],
     pathex=[],
     binaries=[],
-    datas=[('config.json', '.'), ('requirements.txt', '.')],
-    hiddenimports=[],
+    datas=[('config_new.json', '.'), ('deployment_manager_new.py', '.'), ('mdx_checker.py', '.'), ('logger.py', '.')],
+    hiddenimports=['tkinter', 'pathlib', 'json', 're', 'threading', 'subprocess', 'os', 'sys', 'time', 'shutil', 'webbrowser', 'urllib.parse', 'urllib.request', 'urllib.error'],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
@@ -21,7 +22,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name='ToothMenDocsManager',
+    name='ToothMenDocsManager_v2_with_debug_fixed_v2',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
