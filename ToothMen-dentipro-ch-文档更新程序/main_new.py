@@ -26,7 +26,7 @@ from mdx_checker import MDXChecker
 class ToothMenDocsManager:
     def __init__(self, root):
         self.root = root
-        self.root.title("ToothMen-DentiPro-中文版·文档管理系?v2.2")
+        self.root.title("ToothMen-DentiPro-中文版·文档管理系?v2.3 - 新增排序控制功能")
         self.root.geometry("1400x1000")
         
         # 设置图标
@@ -121,9 +121,9 @@ class ToothMenDocsManager:
         self.tree.heading("#0", text="文件/文件夹名称")
         self.tree.heading("type", text="类型")
         
-        # 设置列宽度 - 缩小宽度，为按钮留出空间
-        self.tree.column("#0", width=400, minwidth=300)  # 缩小宽度
-        self.tree.column("type", width=80, minwidth=60)  # 缩小宽度
+        # 设置列宽度 - 进一步缩小宽度，为按钮留出更多空间
+        self.tree.column("#0", width=350, minwidth=250)  # 进一步缩小宽度
+        self.tree.column("type", width=70, minwidth=50)  # 进一步缩小宽度
         
         # 垂直滚动条
         v_scrollbar = ttk.Scrollbar(folder_frame, orient=tk.VERTICAL, command=self.tree.yview)
@@ -350,55 +350,84 @@ class ToothMenDocsManager:
     def scan_and_display_structure(self):
         """扫描并显示文件夹结构"""
         try:
-            # 获取所有一级文件夹（按数字前缀排序?            folders = []
+            # 读取排序配置文件
+            import json
+            sort_config_path = Path(__file__).parent / "sort_config.json"
+            sort_config = {"folders": [], "files": {}}
+            
+            if sort_config_path.exists():
+                with open(sort_config_path, 'r', encoding='utf-8') as f:
+                    sort_config = json.load(f)
+            
+            # 获取所有一级文件夹
+            all_folders = []
             for item in self.docs_folder.iterdir():
                 if item.is_dir():
-                    folders.append(item.name)
+                    all_folders.append(item.name)
             
-            # 按数字前缀排序
-            sorted_folders = self.sort_by_number_prefix(folders)
+            # 按照排序配置文件的顺序显示文件夹
+            display_folders = []
+            
+            # 先添加配置文件中指定的文件夹
+            for folder_name in sort_config.get("folders", []):
+                if folder_name in all_folders:
+                    display_folders.append(folder_name)
+            
+            # 再添加其他文件夹（按字母顺序）
+            for folder_name in sorted(all_folders):
+                if folder_name not in display_folders:
+                    display_folders.append(folder_name)
             
             total_files = 0
-            total_folders = len(sorted_folders)
+            total_folders = len(display_folders)
             
-            # 添加每个文件夹到?            for folder_name in sorted_folders:
+            # 添加每个文件夹到Treeview
+            for folder_name in display_folders:
                 folder_path = self.docs_folder / folder_name
-                
-                # 清理文件夹显示名称（移除数字前缀?                display_name = self.clean_name(folder_name)
-                
-                # 判断是否需要倒序排序
-                is_reverse = self.should_reverse_order(folder_name)
                 
                 # 获取文件夹内的MDX文件
                 mdx_files = []
                 for file in folder_path.glob("*.mdx"):
                     mdx_files.append(file.name)
                 
-                # 按规则排序文?                sorted_files = self.sort_files_by_rule(mdx_files, reverse=is_reverse)
+                # 按照配置文件中的文件顺序
+                sorted_files = []
+                config_files = sort_config.get("files", {}).get(folder_name, [])
                 
-                # 添加文件夹节?- 默认展开
-                folder_id = self.tree.insert("", "end", text=f"📁 {display_name}", 
-                                           values=("文件?, f"{len(sorted_files)}个文?),
+                # 先添加配置文件中指定的文件
+                for config_file in config_files:
+                    config_file_with_ext = f"{config_file}.mdx"
+                    if config_file_with_ext in mdx_files:
+                        sorted_files.append(config_file_with_ext)
+                
+                # 再添加其他文件（按字母顺序）
+                for file_name in sorted(mdx_files):
+                    if file_name not in sorted_files:
+                        sorted_files.append(file_name)
+                
+                # 添加文件夹节点 - 默认展开
+                folder_id = self.tree.insert("", "end", text=f"📁 {folder_name}", 
+                                           values=("文件夹",),
                                            open=True)  # 默认展开
                 
                 # 添加文件节点
                 for file_name in sorted_files:
-                    # 清理文件显示名称
+                    # 清理文件显示名称（移除.mdx扩展名）
                     file_display_name = self.clean_name(file_name)
                     self.tree.insert(folder_id, "end", text=f"📄 {file_display_name}", 
-                                   values=("MDX文件", ""))
+                                   values=("MDX文件",))
                     total_files += 1
                 
-                # 如果没有文件，显示提?                if not sorted_files:
+                # 如果没有文件，显示提示
+                if not sorted_files:
                     self.tree.insert(folder_id, "end", text="(空文件夹)", 
-                                   values=("提示", "无MDX文件"))
+                                   values=("提示",))
             
-            # 添加根节点统计
-            root_text = f"📂 docs文件夹 (共{total_folders}个分类，{total_files}个MDX文件)"
-            self.tree.insert("", 0, text=root_text, values=("根目录", ""), open=True)
+            # 添加根节点（不显示统计信息）
+            self.tree.insert("", 0, text="📂 docs文件夹", values=("根目录",), open=True)
             
         except Exception as e:
-            self.logger.error(f"扫描文件夹结构失? {str(e)}")
+            self.logger.error(f"扫描文件夹结构失败: {str(e)}")
     
     def sort_by_number_prefix(self, items: List[str]) -> List[str]:
         """按数字前缀排序项目"""
