@@ -92,23 +92,17 @@ class DeploymentManager:
     
     def clean_name(self, name: str) -> str:
         """
-        清理名称 - 移除数字前缀和扩展名
+        清理名称 - 只移除.mdx扩展名
         
         Args:
-            name: 原始名称（如"1-程序安装说明.mdx"或"1 -ProgramInstallationInstructions"）
+            name: 原始名称（如"主程序安装说明.mdx"）
         
         Returns:
-            清理后的名称（如"程序安装说明"或"ProgramInstallationInstructions"）
+            清理后的名称（如"主程序安装说明"）
         """
-        # 移除.mdx扩展名
+        # 只移除.mdx扩展名
         if name.endswith('.mdx'):
-            name = name[:-4]
-        
-        # 移除数字前缀（如"1-"或"1 -"）
-        import re
-        # 匹配数字开头，后面可能跟空格和连字符
-        name = re.sub(r'^\d+\s*\-*\s*', '', name)
-        
+            return name[:-4]
         return name
     
     def clean_name_for_url(self, name: str) -> str:
@@ -204,58 +198,97 @@ class DeploymentManager:
     
     def generate_sidebar_content(self) -> str:
         """
-        生成侧边栏内容（支持文件夹分类）
+        生成侧边栏内容 - 按照排序配置文件生成
         
         Returns:
-            sidebars.js内容字符串
+            侧边栏JavaScript代码
         """
+        import json
+        
         lines = []
         lines.append("const sidebars = {")
         lines.append("  tutorialSidebar: [")
         
-        # 扫描文件夹结构
-        structure = self.scan_folder_structure()
-        if not structure:
-            lines.append("    // 暂无文档")
-            lines.append("  ],")
-            lines.append("};")
-            lines.append("")
-            lines.append("export default sidebars;")
-            return "\n".join(lines)
-        
-        # 按数字前缀排序文件夹
-        sorted_folders = self.sort_by_number_prefix(list(structure.keys()))
-        
-        for folder_name in sorted_folders:
-            files = structure[folder_name]
+        # 读取排序配置文件
+        sort_config_path = Path(__file__).parent / "sort_config.json"
+        if sort_config_path.exists():
+            with open(sort_config_path, 'r', encoding='utf-8') as f:
+                sort_config = json.load(f)
             
-            # 使用实际的文件夹名称（英文）
-            display_name = folder_name
-            
-            # 判断是否需要倒序排序
-            is_reverse = self.should_reverse_order(folder_name)
-            
-            # 按规则排序文件
-            sorted_files = self.sort_files_by_rule(files, reverse=is_reverse)
-            
-            if sorted_files:
-                lines.append("    {")
-                lines.append(f"      type: 'category',")
-                lines.append(f"      label: '{display_name}',")
-                lines.append(f"      items: [")
+            # 按照配置的文件夹顺序生成
+            for folder_name in sort_config.get("folders", []):
+                folder_path = self.docs_folder / folder_name
                 
-                for file_name in sorted_files:
+                if not folder_path.exists():
+                    continue
+                
+                # 获取文件夹中的文件
+                files = []
+                for file_item in folder_path.iterdir():
+                    if file_item.is_file() and file_item.name.endswith('.mdx'):
+                        files.append(file_item.name)
+                
+                # 按照配置文件中的文件顺序
+                sorted_files = []
+                config_files = sort_config.get("files", {}).get(folder_name, [])
+                
+                # 先添加配置文件中指定的文件
+                for config_file in config_files:
+                    config_file_with_ext = f"{config_file}.mdx"
+                    if config_file_with_ext in files:
+                        sorted_files.append(config_file_with_ext)
+                
+                # 再添加其他文件（按字母顺序）
+                for file_name in sorted(files):
+                    if file_name not in sorted_files:
+                        sorted_files.append(file_name)
+                
+                if sorted_files:
+                    lines.append("    {")
+                    lines.append(f"      type: 'category',")
+                    lines.append(f"      label: '{folder_name}',")
+                    lines.append(f"      items: [")
+                    
+                    for file_name in sorted_files:
                         # 生成文档ID（Docusaurus格式：文件夹名/文件名）
-                        # 文件夹名称需要清理数字前缀，文件名称也需要清理数字前缀
-                        # 例如：1-ProgramInstallationInstructions/1-主程序安装说明.mdx → ProgramInstallationInstructions/主程序安装说明
-                        clean_folder_name = self.clean_name(folder_name)
+                        # 无需清理数字前缀，因为文件夹和文件都没有数字前缀了
                         clean_file_name = self.clean_name(file_name)
-                        doc_id = f"{clean_folder_name}/{clean_file_name}"
+                        doc_id = f"{folder_name}/{clean_file_name}"
                         lines.append(f"        '{doc_id}',")
+                    
+                    lines.append(f"      ],")
+                    lines.append(f"      collapsed: true,")
+                    lines.append("    },")
+        else:
+            # 如果没有排序配置文件，按字母顺序生成
+            folders = []
+            for item in self.docs_folder.iterdir():
+                if item.is_dir():
+                    folders.append(item.name)
+            
+            for folder_name in sorted(folders):
+                folder_path = self.docs_folder / folder_name
                 
-                lines.append(f"      ],")
-                lines.append(f"      collapsed: true,")
-                lines.append("    },")
+                # 获取文件夹中的文件
+                files = []
+                for file_item in folder_path.iterdir():
+                    if file_item.is_file() and file_item.name.endswith('.mdx'):
+                        files.append(file_item.name)
+                
+                if files:
+                    lines.append("    {")
+                    lines.append(f"      type: 'category',")
+                    lines.append(f"      label: '{folder_name}',")
+                    lines.append(f"      items: [")
+                    
+                    for file_name in sorted(files):
+                        clean_file_name = self.clean_name(file_name)
+                        doc_id = f"{folder_name}/{clean_file_name}"
+                        lines.append(f"        '{doc_id}',")
+                    
+                    lines.append(f"      ],")
+                    lines.append(f"      collapsed: true,")
+                    lines.append("    },")
         
         lines.append("  ],")
         lines.append("};")

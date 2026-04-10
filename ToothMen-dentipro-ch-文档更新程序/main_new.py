@@ -103,35 +103,75 @@ class ToothMenDocsManager:
         # 创建日志和调试工具区?        self.create_log_and_debug_area(main_frame)
         
     def create_folder_structure_area(self, parent):
-        """创建文件夹结构显示区?""
-        # 文件夹结构框?        folder_frame = ttk.LabelFrame(parent, text="文档文件夹结?, padding="10")
+        """创建文件夹结构显示区域"""
+        # 文件夹结构框架
+        folder_frame = ttk.LabelFrame(parent, text="文档文件夹结构", padding="10")
         folder_frame.grid(row=1, column=0, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(0, 10))
         folder_frame.columnconfigure(0, weight=1)
+        folder_frame.columnconfigure(1, weight=0)  # 排序按钮列
         folder_frame.rowconfigure(0, weight=1)
         folder_frame.rowconfigure(1, weight=0)  # 水平滚动条行
         
-        # 创建Treeview显示文件夹结?        self.tree = ttk.Treeview(folder_frame, columns=("type", "count"), show="tree headings")
+        # 创建Treeview显示文件夹结构
+        self.tree = ttk.Treeview(folder_frame, columns=("type", "count"), show="tree headings")
         self.tree.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         
-        # 设置?        self.tree.heading("#0", text="文件?文件结构")
+        # 设置标题
+        self.tree.heading("#0", text="文件/文件夹结构")
         self.tree.heading("type", text="类型")
         self.tree.heading("count", text="数量")
         
-        # 设置列宽?- 加大左侧按钮区域
-        self.tree.column("#0", width=700, minwidth=500)  # 加大宽度
-        self.tree.column("type", width=120, minwidth=100)  # 加大宽度
-        self.tree.column("count", width=100, minwidth=80)  # 加大宽度
+        # 设置列宽度 - 加大左侧按钮区域
+        self.tree.column("#0", width=650, minwidth=500)  # 稍微减小宽度，为按钮留空间
+        self.tree.column("type", width=120, minwidth=100)
+        self.tree.column("count", width=100, minwidth=80)
         
-        # 垂直滚动?        v_scrollbar = ttk.Scrollbar(folder_frame, orient=tk.VERTICAL, command=self.tree.yview)
+        # 垂直滚动条
+        v_scrollbar = ttk.Scrollbar(folder_frame, orient=tk.VERTICAL, command=self.tree.yview)
         v_scrollbar.grid(row=0, column=1, sticky=(tk.N, tk.S))
         self.tree.config(yscrollcommand=v_scrollbar.set)
         
-        # 水平滚动条（文件多时方便查看?        h_scrollbar = ttk.Scrollbar(folder_frame, orient=tk.HORIZONTAL, command=self.tree.xview)
+        # 水平滚动条（文件多时方便查看）
+        h_scrollbar = ttk.Scrollbar(folder_frame, orient=tk.HORIZONTAL, command=self.tree.xview)
         h_scrollbar.grid(row=1, column=0, sticky=(tk.W, tk.E))
         self.tree.config(xscrollcommand=h_scrollbar.set)
         
+        # 创建排序按钮区域（在Treeview右侧）
+        sort_button_frame = ttk.Frame(folder_frame)
+        sort_button_frame.grid(row=0, column=2, sticky=(tk.N, tk.S), padx=(10, 0))
+        
+        # 文件夹排序按钮
+        ttk.Label(sort_button_frame, text="文件夹排序:").pack(pady=(0, 5))
+        
+        self.btn_folder_up = tk.Button(sort_button_frame, text="⬆ 上移", 
+                                      command=self.move_folder_up, width=10)
+        self.btn_folder_up.pack(pady=2)
+        
+        self.btn_folder_down = tk.Button(sort_button_frame, text="⬇ 下移", 
+                                        command=self.move_folder_down, width=10)
+        self.btn_folder_down.pack(pady=2)
+        
+        # 文件排序按钮
+        ttk.Label(sort_button_frame, text="文件排序:").pack(pady=(10, 5))
+        
+        self.btn_file_up = tk.Button(sort_button_frame, text="⬆ 上移", 
+                                    command=self.move_file_up, width=10)
+        self.btn_file_up.pack(pady=2)
+        
+        self.btn_file_down = tk.Button(sort_button_frame, text="⬇ 下移", 
+                                      command=self.move_file_down, width=10)
+        self.btn_file_down.pack(pady=2)
+        
+        # 保存排序按钮
+        self.btn_save_sort = tk.Button(sort_button_frame, text="💾 保存排序", 
+                                      command=self.save_sort_config, width=10)
+        self.btn_save_sort.pack(pady=(20, 0))
+        
         # 绑定双击事件
         self.tree.bind('<Double-Button-1>', self.on_tree_double_click)
+        
+        # 绑定选择事件，用于启用/禁用排序按钮
+        self.tree.bind('<<TreeviewSelect>>', self.on_tree_selection)
         
     def create_log_and_debug_area(self, parent):
         """创建日志和调试工具区域"""
@@ -376,23 +416,17 @@ class ToothMenDocsManager:
     
     def clean_name(self, name: str) -> str:
         """
-        清理名称 - 移除数字前缀和扩展名
+        清理名称 - 只移除.mdx扩展名
         
         Args:
-            name: 原始名称（如"1-程序安装说明.mdx"或"1 -ProgramInstallationInstructions"）
+            name: 原始名称（如"主程序安装说明.mdx"）
         
         Returns:
-            清理后的名称（如"程序安装说明"或"ProgramInstallationInstructions"）
+            清理后的名称（如"主程序安装说明"）
         """
-        # 移除.mdx扩展名
+        # 只移除.mdx扩展名
         if name.endswith('.mdx'):
-            name = name[:-4]
-        
-        # 移除数字前缀（如"1-"或"1 -"）
-        import re
-        # 匹配数字开头，后面可能跟空格和连字符
-        name = re.sub(r'^\d+\s*\-*\s*', '', name)
-        
+            return name[:-4]
         return name
     
     def clean_name_for_url(self, name: str) -> str:
@@ -575,52 +609,93 @@ class ToothMenDocsManager:
                 self.update_button_state("生成侧边?, "error")
     
     def generate_sidebar_content(self) -> str:
-        """生成侧边栏内?""
+        """生成侧边栏内容 - 按照排序配置文件生成"""
+        import json
+        
         lines = []
         lines.append("const sidebars = {")
         lines.append("  tutorialSidebar: [")
         
-        # 获取所有一级文件夹（按数字前缀排序?        folders = []
-        for item in self.docs_folder.iterdir():
-            if item.is_dir():
-                folders.append(item.name)
-        
-        sorted_folders = self.sort_by_number_prefix(folders)
-        
-        for folder_name in sorted_folders:
-            folder_path = self.docs_folder / folder_name
+        # 读取排序配置文件
+        sort_config_path = Path(__file__).parent / "sort_config.json"
+        if sort_config_path.exists():
+            with open(sort_config_path, 'r', encoding='utf-8') as f:
+                sort_config = json.load(f)
             
-            # 使用实际的文件夹名称（英文）
-            display_name = folder_name
-            
-            # 判断是否需要倒序排序
-            is_reverse = self.should_reverse_order(folder_name)
-            
-            # 获取文件夹内的MDX文件
-            mdx_files = []
-            for file in folder_path.glob("*.mdx"):
-                mdx_files.append(file.name)
-            
-            # 按规则排序文?            sorted_files = self.sort_files_by_rule(mdx_files, reverse=is_reverse)
-            
-            if sorted_files:
-                lines.append("    {")
-                lines.append(f"      type: 'category',")
-                lines.append(f"      label: '{display_name}',")
-                lines.append(f"      items: [")
+            # 按照配置的文件夹顺序生成
+            for folder_name in sort_config.get("folders", []):
+                folder_path = self.docs_folder / folder_name
                 
-                for file_name in sorted_files:
+                if not folder_path.exists():
+                    continue
+                
+                # 获取文件夹中的文件
+                files = []
+                for file_item in folder_path.iterdir():
+                    if file_item.is_file() and file_item.name.endswith('.mdx'):
+                        files.append(file_item.name)
+                
+                # 按照配置文件中的文件顺序
+                sorted_files = []
+                config_files = sort_config.get("files", {}).get(folder_name, [])
+                
+                # 先添加配置文件中指定的文件
+                for config_file in config_files:
+                    config_file_with_ext = f"{config_file}.mdx"
+                    if config_file_with_ext in files:
+                        sorted_files.append(config_file_with_ext)
+                
+                # 再添加其他文件（按字母顺序）
+                for file_name in sorted(files):
+                    if file_name not in sorted_files:
+                        sorted_files.append(file_name)
+                
+                if sorted_files:
+                    lines.append("    {")
+                    lines.append(f"      type: 'category',")
+                    lines.append(f"      label: '{folder_name}',")
+                    lines.append(f"      items: [")
+                    
+                    for file_name in sorted_files:
                         # 生成文档ID（Docusaurus格式：文件夹名/文件名）
-                        # 文件夹名称需要清理数字前缀，文件名称也需要清理数字前缀
-                        # 例如：1-ProgramInstallationInstructions/1-主程序安装说明.mdx → ProgramInstallationInstructions/主程序安装说明
-                        clean_folder_name = self.clean_name(folder_name)
+                        # 无需清理数字前缀，因为文件夹和文件都没有数字前缀了
                         clean_file_name = self.clean_name(file_name)
-                        doc_id = f"{clean_folder_name}/{clean_file_name}"
+                        doc_id = f"{folder_name}/{clean_file_name}"
                         lines.append(f"        '{doc_id}',")
+                    
+                    lines.append(f"      ],")
+                    lines.append(f"      collapsed: true,")
+                    lines.append("    },")
+        else:
+            # 如果没有排序配置文件，按字母顺序生成
+            folders = []
+            for item in self.docs_folder.iterdir():
+                if item.is_dir():
+                    folders.append(item.name)
+            
+            for folder_name in sorted(folders):
+                folder_path = self.docs_folder / folder_name
                 
-                lines.append(f"      ],")
-                lines.append(f"      collapsed: true,")
-                lines.append("    },")
+                # 获取文件夹中的文件
+                files = []
+                for file_item in folder_path.iterdir():
+                    if file_item.is_file() and file_item.name.endswith('.mdx'):
+                        files.append(file_item.name)
+                
+                if files:
+                    lines.append("    {")
+                    lines.append(f"      type: 'category',")
+                    lines.append(f"      label: '{folder_name}',")
+                    lines.append(f"      items: [")
+                    
+                    for file_name in sorted(files):
+                        clean_file_name = self.clean_name(file_name)
+                        doc_id = f"{folder_name}/{clean_file_name}"
+                        lines.append(f"        '{doc_id}',")
+                    
+                    lines.append(f"      ],")
+                    lines.append(f"      collapsed: true,")
+                    lines.append("    },")
         
         lines.append("  ],")
         lines.append("};")
@@ -628,6 +703,166 @@ class ToothMenDocsManager:
         lines.append("export default sidebars;")
         
         return "\n".join(lines)
+    
+    def on_tree_selection(self, event):
+        """处理Treeview选择事件，启用/禁用排序按钮"""
+        selection = self.tree.selection()
+        if not selection:
+            # 没有选择，禁用所有排序按钮
+            self.btn_folder_up.config(state="disabled")
+            self.btn_folder_down.config(state="disabled")
+            self.btn_file_up.config(state="disabled")
+            self.btn_file_down.config(state="disabled")
+            return
+        
+        item_id = selection[0]
+        item = self.tree.item(item_id)
+        
+        # 检查是文件夹还是文件
+        parent_id = self.tree.parent(item_id)
+        
+        if parent_id == "":
+            # 这是文件夹
+            self.btn_folder_up.config(state="normal")
+            self.btn_folder_down.config(state="normal")
+            self.btn_file_up.config(state="disabled")
+            self.btn_file_down.config(state="disabled")
+        else:
+            # 这是文件
+            self.btn_folder_up.config(state="disabled")
+            self.btn_folder_down.config(state="disabled")
+            self.btn_file_up.config(state="normal")
+            self.btn_file_down.config(state="normal")
+    
+    def move_folder_up(self):
+        """上移选中的文件夹"""
+        selection = self.tree.selection()
+        if not selection:
+            return
+        
+        item_id = selection[0]
+        parent_id = self.tree.parent(item_id)
+        
+        # 只有顶级文件夹可以移动
+        if parent_id != "":
+            return
+        
+        # 获取所有同级文件夹
+        siblings = list(self.tree.get_children(parent_id))
+        index = siblings.index(item_id)
+        
+        if index > 0:
+            # 上移
+            self.tree.move(item_id, parent_id, index - 1)
+            self.logger.info(f"文件夹上移: {self.tree.item(item_id)['text']}")
+    
+    def move_folder_down(self):
+        """下移选中的文件夹"""
+        selection = self.tree.selection()
+        if not selection:
+            return
+        
+        item_id = selection[0]
+        parent_id = self.tree.parent(item_id)
+        
+        # 只有顶级文件夹可以移动
+        if parent_id != "":
+            return
+        
+        # 获取所有同级文件夹
+        siblings = list(self.tree.get_children(parent_id))
+        index = siblings.index(item_id)
+        
+        if index < len(siblings) - 1:
+            # 下移
+            self.tree.move(item_id, parent_id, index + 1)
+            self.logger.info(f"文件夹下移: {self.tree.item(item_id)['text']}")
+    
+    def move_file_up(self):
+        """上移选中的文件"""
+        selection = self.tree.selection()
+        if not selection:
+            return
+        
+        item_id = selection[0]
+        parent_id = self.tree.parent(item_id)
+        
+        # 只有文件可以移动（有父级）
+        if parent_id == "":
+            return
+        
+        # 获取所有同级文件
+        siblings = list(self.tree.get_children(parent_id))
+        index = siblings.index(item_id)
+        
+        if index > 0:
+            # 上移
+            self.tree.move(item_id, parent_id, index - 1)
+            self.logger.info(f"文件上移: {self.tree.item(item_id)['text']}")
+    
+    def move_file_down(self):
+        """下移选中的文件"""
+        selection = self.tree.selection()
+        if not selection:
+            return
+        
+        item_id = selection[0]
+        parent_id = self.tree.parent(item_id)
+        
+        # 只有文件可以移动（有父级）
+        if parent_id == "":
+            return
+        
+        # 获取所有同级文件
+        siblings = list(self.tree.get_children(parent_id))
+        index = siblings.index(item_id)
+        
+        if index < len(siblings) - 1:
+            # 下移
+            self.tree.move(item_id, parent_id, index + 1)
+            self.logger.info(f"文件下移: {self.tree.item(item_id)['text']}")
+    
+    def save_sort_config(self):
+        """保存排序配置到文件"""
+        try:
+            import json
+            
+            # 从Treeview中提取排序信息
+            sort_config = {
+                "folders": [],
+                "files": {}
+            }
+            
+            # 获取所有顶级文件夹（按显示顺序）
+            folder_items = self.tree.get_children("")
+            for folder_id in folder_items:
+                folder_name = self.tree.item(folder_id)["text"]
+                sort_config["folders"].append(folder_name)
+                
+                # 获取该文件夹下的文件（按显示顺序）
+                file_items = self.tree.get_children(folder_id)
+                file_names = []
+                for file_id in file_items:
+                    file_full_name = self.tree.item(file_id)["text"]
+                    # 移除.mdx扩展名
+                    if file_full_name.endswith(".mdx"):
+                        file_name = file_full_name[:-4]
+                    else:
+                        file_name = file_full_name
+                    file_names.append(file_name)
+                
+                sort_config["files"][folder_name] = file_names
+            
+            # 保存到文件
+            config_path = Path(__file__).parent / "sort_config.json"
+            with open(config_path, 'w', encoding='utf-8') as f:
+                json.dump(sort_config, f, ensure_ascii=False, indent=2)
+            
+            self.logger.info("✅ 排序配置已保存")
+            self.logger.info(f"📁 文件夹顺序: {', '.join(sort_config['folders'])}")
+            
+        except Exception as e:
+            self.logger.error(f"保存排序配置失败: {str(e)}")
     
     def open_docs_folder(self):
         """打开docs文件?""
