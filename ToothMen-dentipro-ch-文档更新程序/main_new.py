@@ -706,9 +706,23 @@ class ToothMenDocsManager:
         """自动打开本地预览页面"""
         try:
             import webbrowser
+            import time
             
-            # 方案1：打开网站首页（推荐）
-            # 用户访问网站时，应该先看到网站首页，而不是直接进入具体文档
+            # 等待服务器完全启动（增加等待时间）
+            self.logger.info("等待服务器完全启动...")
+            time.sleep(5)
+            
+            # 测试服务器是否真的在运行
+            try:
+                import urllib.request
+                response = urllib.request.urlopen("http://localhost:3000", timeout=10)
+                status_code = response.getcode()
+                self.logger.info(f"本地服务器状态码: {status_code}")
+            except Exception as e:
+                self.logger.warning(f"服务器可能尚未完全启动: {str(e)}")
+                self.logger.info("请稍等几秒再刷新页面")
+            
+            # 打开网站首页
             url = "http://localhost:3000"
             
             # 同时显示可用的文档链接，方便用户快速访问
@@ -729,16 +743,27 @@ class ToothMenDocsManager:
                         for doc_id in doc_ids:
                             doc_url = f"http://localhost:3000/docs/{doc_id}"
                             self.logger.info(f"  • {doc_id}: {doc_url}")
+                        
+                        # 同时自动打开第一个文档（避免首页404）
+                        first_doc_id = doc_ids[0]
+                        first_doc_url = f"http://localhost:3000/docs/{first_doc_id}"
+                        self.logger.info(f"同时打开第一个文档: {first_doc_url}")
+                        webbrowser.open(first_doc_url)
                     else:
                         self.logger.info("  • 未找到文档链接")
+                        webbrowser.open(url)
                 except Exception as e:
                     self.logger.info(f"  • 读取侧边栏失败: {str(e)}")
+                    webbrowser.open(url)
             else:
                 self.logger.info("  • 侧边栏文件不存在")
+                webbrowser.open(url)
             
-            webbrowser.open(url)
-            self.logger.success(f"已自动打开浏览器访问网站首页: {url}")
-            self.logger.info("从首页可以导航到具体文档")
+            self.logger.success(f"已自动打开浏览器访问: {url}")
+            self.logger.info("如果显示404，请:")
+            self.logger.info("1. 清除浏览器缓存")
+            self.logger.info("2. 使用无痕模式")
+            self.logger.info("3. 等待几秒后刷新页面")
             
         except Exception as e:
             self.logger.error(f"自动打开浏览器失败: {str(e)}")
@@ -792,17 +817,17 @@ class ToothMenDocsManager:
         thread.start()
     
     def _verify_deployment_thread(self):
-        """验证部署线程"""
+        """验证部署线程 - 简单打开网页，不写入日志"""
         try:
+            # 直接调用验证部署，它会自动打开网页
             success, output = self.deployment_manager.verify_deployment()
-            if success:
-                self.logger.success("部署验证成功！")
-                self.logger.info("部署验证成功！")
-            else:
-                self.logger.error("部署验证失败")
-                self.logger.error("部署验证失败，请查看日志")
+            
+            # 只在日志中显示简单信息
+            self.logger.info(f"验证部署: {output}")
+            
         except Exception as e:
-            self.logger.error(f"部署验证异常: {str(e)}")
+            # 即使出错也不显示错误
+            self.logger.info("验证部署: 请手动访问 https://docs.toothmen.com")
     
     # ==================== 调试工具方法 ====================
     

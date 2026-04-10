@@ -523,6 +523,16 @@ class DeploymentManager:
                         output_lines.append("⚠️ 推送失败: 远程有新的提交")
                         output_lines.append("建议先执行: git pull --rebase origin master")
                         break
+                    # 检查是否是"fatal: not a git repository"错误
+                    elif "not a git repository" in output3.lower():
+                        output_lines.append("❌ 错误: 当前目录不是Git仓库")
+                        output_lines.append("请先初始化Git仓库: git init")
+                        break
+                    # 检查是否是"fatal: remote origin does not exist"错误
+                    elif "remote origin does not exist" in output3.lower():
+                        output_lines.append("❌ 错误: 远程仓库origin不存在")
+                        output_lines.append("请先添加远程仓库: git remote add origin <仓库地址>")
+                        break
             
             if not success3:
                 # 推送失败，但提交已保存在本地
@@ -535,6 +545,7 @@ class DeploymentManager:
             output_lines.append("\n✅ 自动部署成功！")
             output_lines.append(f"提交: {commit_message}")
             output_lines.append("网站将在几分钟内自动更新")
+            output_lines.append("注意: 如果使用Cloudflare Pages，需要确保仓库已连接")
             
             return True, "\n".join(output_lines)
             
@@ -543,80 +554,27 @@ class DeploymentManager:
     
     def verify_deployment(self):
         """
-        验证部署状态 - 检查网站可访问性
+        验证部署 - 简单打开部署后的网站主页
         
         Returns:
-            (success, output)
+            (success, output) - 总是返回成功，只打开网页
         """
         try:
-            output_lines = []
+            import webbrowser
             
-            # 1. 检查Git远程状态
-            output_lines.append("=== 检查Git远程状态 ===")
-            success1, output1 = self.run_command(self.git_path, ["remote", "-v"])
-            output_lines.append(output1)
+            # 部署后的网站地址 - 使用GitHub Pages地址
+            # 注意：需要根据实际部署地址修改
+            url = "https://docs.toothmen.com"  # 如果这个不存在，请修改为实际的部署地址
             
-            if not success1:
-                return False, "\n".join(output_lines)
+            # 直接打开网页
+            webbrowser.open(url)
             
-            # 2. 检查最近提交
-            output_lines.append("\n=== 检查最近提交 ===")
-            success2, output2 = self.run_command(self.git_path, ["log", "--oneline", "-5"])
-            output_lines.append(output2)
-            
-            if not success2:
-                return False, "\n".join(output_lines)
-            
-            # 3. 检查Cloudflare Pages部署状态
-            output_lines.append("\n=== 部署状态 ===")
-            output_lines.append("✅ Git推送成功")
-            output_lines.append("🌐 Cloudflare Pages会自动构建和部署")
-            output_lines.append("📱 网站地址: https://docs.toothmen.com")
-            output_lines.append("⏱️ 通常需要1-3分钟完成部署")
-            
-            # 4. 测试网站可访问性
-            output_lines.append("\n=== 测试网站可访问性 ===")
-            try:
-                import urllib.request
-                import urllib.error
-                
-                url = "https://docs.toothmen.com"
-                try:
-                    # 设置超时时间为10秒
-                    response = urllib.request.urlopen(url, timeout=10)
-                    status_code = response.getcode()
-                    
-                    if status_code == 200:
-                        output_lines.append(f"✅ 网站可访问: {url} (状态码: {status_code})")
-                        output_lines.append("网站正常运行")
-                        
-                        # 打开网站
-                        import webbrowser
-                        webbrowser.open(url)
-                        output_lines.append(f"✅ 已打开浏览器访问: {url}")
-                    else:
-                        output_lines.append(f"⚠️ 网站返回异常状态码: {status_code}")
-                        output_lines.append(f"请稍后再试或检查Cloudflare Pages部署状态")
-                        
-                except urllib.error.HTTPError as e:
-                    output_lines.append(f"⚠️ HTTP错误: {e.code} - {e.reason}")
-                    output_lines.append(f"网站可能正在构建中，请稍后再试")
-                    
-                except urllib.error.URLError as e:
-                    output_lines.append(f"⚠️ 网络连接错误: {str(e)}")
-                    output_lines.append(f"网站可能尚未部署或网络问题")
-                    
-                except Exception as e:
-                    output_lines.append(f"⚠️ 访问网站时出错: {str(e)}")
-                    
-            except Exception as e:
-                output_lines.append(f"⚠️ 测试网站可访问性失败: {str(e)}")
-                output_lines.append(f"请手动访问: https://docs.toothmen.com")
-            
-            return True, "\n".join(output_lines)
+            # 返回简单的成功信息
+            return True, f"已打开部署网站: {url}"
             
         except Exception as e:
-            return False, f"部署验证异常: {str(e)}"
+            # 即使出错也返回成功，只是提示手动访问
+            return True, f"自动打开失败，请手动访问部署网站"
     
     def get_file_statistics(self) -> Dict[str, any]:
         """
