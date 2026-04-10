@@ -256,6 +256,12 @@ class ToothMenDocsManager:
                                        bg="SystemButtonFace", fg="black", relief="raised", bd=2)
         self.btn_end_deploy.pack(side=tk.LEFT, padx=5)
         
+        # 验证部署按钮（独立，一直可用）
+        self.btn_verify_deploy = tk.Button(deploy_control_frame, text="🌐 验证部署", 
+                                          command=self.verify_deployment, width=20,
+                                          bg="SystemButtonFace", fg="black", relief="raised", bd=2)
+        self.btn_verify_deploy.pack(side=tk.LEFT, padx=5)
+        
         # 分隔线
         ttk.Separator(control_frame, orient='horizontal').grid(row=3, column=0, columnspan=4, 
                                                               sticky=(tk.W, tk.E), pady=10)
@@ -274,7 +280,6 @@ class ToothMenDocsManager:
             ("本地构建测试", self.local_build_test, "执行npm run build测试构建"),
             ("本地预览", self.local_preview, "启动本地开发服务器预览"),
             ("自动部署", self.auto_deploy, "执行Git推送和Cloudflare部署"),
-            ("验证部署", self.verify_deployment, "验证部署状态"),
         ]
         
         # 创建部署步骤按钮（默认禁用）
@@ -731,12 +736,8 @@ class ToothMenDocsManager:
                 self.update_button_state("自动部署", "error")
     
     def verify_deployment(self):
-        """验证部署"""
+        """验证部署（独立功能，随时可用）"""
         self.logger.info("验证部署状态...")
-        
-        # 如果是在部署流程中，更新按钮状态为运行中
-        if self.deployment_started:
-            self.update_button_state("验证部署", "running")
         
         # 在新线程中执行验证
         thread = threading.Thread(target=self._verify_deployment_thread)
@@ -750,23 +751,11 @@ class ToothMenDocsManager:
             if success:
                 self.logger.success("部署验证成功！")
                 self.logger.info("部署验证成功！")
-                
-                # 如果是在部署流程中，更新按钮状态
-                if self.deployment_started:
-                    self.update_button_state("验证部署", "success")
             else:
                 self.logger.error("部署验证失败")
                 self.logger.error("部署验证失败，请查看日志")
-                
-                # 如果是在部署流程中，更新按钮状态
-                if self.deployment_started:
-                    self.update_button_state("验证部署", "error")
         except Exception as e:
             self.logger.error(f"部署验证异常: {str(e)}")
-            
-            # 如果是在部署流程中，更新按钮状态
-            if self.deployment_started:
-                self.update_button_state("验证部署", "error")
     
     # ==================== 调试工具方法 ====================
     
@@ -1276,7 +1265,7 @@ class ToothMenDocsManager:
         self.enable_deployment_step(0)
         
         self.logger.info("部署流程已开始，请按顺序执行步骤")
-        self.logger.info("步骤1: 刷新文件结构 → 步骤2: 生成侧边栏 → 步骤3: 本地构建测试 → 步骤4: 本地预览 → 步骤5: 自动部署 → 步骤6: 验证部署")
+        self.logger.info("步骤1: 刷新文件结构 → 步骤2: 生成侧边栏 → 步骤3: 本地构建测试 → 步骤4: 本地预览 → 步骤5: 自动部署")
     
     def end_deployment_flow(self):
         """结束部署流程"""
@@ -1341,8 +1330,8 @@ class ToothMenDocsManager:
             # 找到当前按钮的索引
             for i, (name, _, _) in enumerate(self.deployment_buttons):
                 if name == button_name:
-                    # 如果是验证部署成功，2秒后结束流程
-                    if button_name == "验证部署":
+                    # 如果是自动部署成功，2秒后结束流程
+                    if button_name == "自动部署":
                         self.root.after(2000, self.end_deployment_flow)
                     else:
                         # 解锁下一个步骤

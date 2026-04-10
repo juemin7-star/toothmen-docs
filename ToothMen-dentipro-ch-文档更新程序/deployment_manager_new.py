@@ -531,7 +531,7 @@ class DeploymentManager:
     
     def verify_deployment(self):
         """
-        验证部署状态
+        验证部署状态 - 打开部署好的网页
         
         Returns:
             (success, output)
@@ -561,6 +561,19 @@ class DeploymentManager:
             output_lines.append("🌐 Cloudflare Pages会自动构建和部署")
             output_lines.append("📱 网站地址: https://docs.toothmen.com")
             output_lines.append("⏱️ 通常需要1-3分钟完成部署")
+            
+            # 4. 打开部署好的网页
+            output_lines.append("\n=== 打开部署网页 ===")
+            try:
+                import webbrowser
+                # 打开部署好的网站
+                url = "https://docs.toothmen.com"
+                webbrowser.open(url)
+                output_lines.append(f"✅ 已打开浏览器访问: {url}")
+                output_lines.append("请查看网页是否正常显示")
+            except Exception as e:
+                output_lines.append(f"⚠️ 自动打开浏览器失败: {str(e)}")
+                output_lines.append(f"请手动访问: https://docs.toothmen.com")
             
             return True, "\n".join(output_lines)
             
