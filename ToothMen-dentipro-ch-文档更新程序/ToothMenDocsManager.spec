@@ -5,7 +5,7 @@ a = Analysis(
     ['main_correct_layout.py'],
     pathex=[],
     binaries=[],
-    datas=[('config_new.json', '.'), ('deployment_manager_new.py', '.'), ('mdx_checker.py', '.'), ('logger.py', '.')],
+    datas=[('config_new.json', '.'), ('deployment_manager_new.py', '.'), ('mdx_checker.py', '.'), ('logger.py', '.'), ('sort_config.json', '.')],
     hiddenimports=['tkinter', 'pathlib', 'json', 're', 'threading', 'subprocess', 'os', 'sys', 'time', 'shutil', 'webbrowser', 'urllib.parse', 'urllib.request', 'urllib.error', 'unicodedata'],
     hookspath=[],
     hooksconfig={},
