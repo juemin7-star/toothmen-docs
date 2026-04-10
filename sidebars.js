@@ -2,27 +2,27 @@ const sidebars = {
   tutorialSidebar: [
     {
       type: 'category',
-      label: '程序安装说明',
+      label: '2-CloudUpdateInstructions',
       items: [
-        '程序安装说明/主程序安装说明',
+        'CloudUpdateInstructions/云更新服务注册说明',
+        'CloudUpdateInstructions/注册规则特殊说明',
       ],
       collapsed: true,
     },
     {
       type: 'category',
-      label: '云更新服务注册说明',
+      label: '3-bugfixlog',
       items: [
-        '云更新服务注册说明/云更新服务注册说明',
-        '云更新服务注册说明/注册规则特殊说明',
+        'bugfixlog/NEW-26040101',
+        'bugfixlog/NEW-26040902',
       ],
       collapsed: true,
     },
     {
       type: 'category',
-      label: '补丁更新日志',
+      label: '1 -ProgramInstallationInstructions',
       items: [
-        '补丁更新日志/NEW-26040101',
-        '补丁更新日志/NEW-26040902',
+        'ProgramInstallationInstructions/主程序安装说明',
       ],
       collapsed: true,
     },

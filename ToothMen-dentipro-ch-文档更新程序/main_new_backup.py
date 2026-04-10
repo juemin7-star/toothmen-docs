@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 ToothMen文档管理工具 - 全新版本
@@ -379,32 +379,34 @@ class ToothMenDocsManager:
         清理名称 - 移除数字前缀和扩展名
         
         Args:
-            name: 原始名称（如"1-程序安装说明.mdx"或"1 -ProgramInstallationInstructions"）
+            name: 原始名称（如"1-程序安装说明.mdx"）
         
         Returns:
-            清理后的名称（如"程序安装说明"或"ProgramInstallationInstructions"）
+            清理后的名称（如"程序安装说明"）
         """
         # 移除.mdx扩展名
         if name.endswith('.mdx'):
             name = name[:-4]
         
-        # 移除数字前缀（如"1-"或"1 -"）
+        # 移除数字前缀（如"1-"）
         import re
-        # 匹配数字开头，后面可能跟空格和连字符
-        name = re.sub(r'^\d+\s*\-*\s*', '', name)
+        name = re.sub(r'^\d+\-', '', name)
         
         return name
     
     def clean_name_for_url(self, name: str) -> str:
-        """Clean name for URL"""
-        # 移除.mdx扩展名
-        if name.endswith('.mdx'):
+        """
+        清理名称用于URL - 移除数字前缀和扩展名，中文转英文
+        
+        Args:
+            name: 原始名称（如"1-程序安装说明.mdx"?        
+        Returns:
+            清理后的英文名称（如"program-installation-guide"?        """
+        # 移除.mdx扩展?        if name.endswith('.mdx'):
             name = name[:-4]
         
-        # 移除数字前缀（如"1-"或"1 -"）
-        import re
-        # 匹配数字开头，后面可能跟空格和连字符
-        name = re.sub(r'^\d+\s*\-*\s*', '', name)
+        # 移除数字前缀（如"1-"?        import re
+        name = re.sub(r'^\d+\-', '', name)
         
         # 中文转英?拼音映射?        chinese_to_english = {
             # 文件夹名称映?            '程序安装说明': 'program-installation-guide',
@@ -610,12 +612,10 @@ class ToothMenDocsManager:
                 lines.append(f"      items: [")
                 
                 for file_name in sorted_files:
-                        # 生成文档ID（Docusaurus格式：文件夹名/文件名）
-                        # 文件夹名称需要清理数字前缀，文件名称也需要清理数字前缀
-                        # 例如：1-ProgramInstallationInstructions/1-主程序安装说明.mdx → ProgramInstallationInstructions/主程序安装说明
-                        clean_folder_name = self.clean_name(folder_name)
-                        clean_file_name = self.clean_name(file_name)
-                        doc_id = f"{clean_folder_name}/{clean_file_name}"
+                        # 生成文档ID（Docusaurus格式：文件夹?文件名）
+                        # 文件夹名称使用实际名称（英文），文件名称清理数字前缀
+                        # 例如?-主程序安装说?mdx ?ProgramInstallationInstructions/主程序安装说?                        clean_file_name = self.clean_name(file_name)
+                        doc_id = f"{folder_name}/{clean_file_name}"
                         lines.append(f"        '{doc_id}',")
                 
                 lines.append(f"      ],")

@@ -108,7 +108,7 @@ trailingSlash: false,
         items: [
           {
             type: 'doc',
-            docId: '补丁更新日志/NEW-26040902',
+            docId: 'bugfixlog/NEW-26040902',
             position: 'left',
             label: '文档',
           },

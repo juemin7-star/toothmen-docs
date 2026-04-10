@@ -2,7 +2,7 @@
 
 
 a = Analysis(
-    ['main_new.py'],
+    ['main_correct_layout.py'],
     pathex=[],
     binaries=[],
     datas=[('config_new.json', '.'), ('deployment_manager_new.py', '.'), ('mdx_checker.py', '.'), ('logger.py', '.')],
@@ -22,7 +22,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name='ToothMenDocsManager_v2.1',
+    name='ToothMenDocsManager',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
