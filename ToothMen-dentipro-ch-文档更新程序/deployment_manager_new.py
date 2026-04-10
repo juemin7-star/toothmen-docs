@@ -248,6 +248,16 @@ class DeploymentManager:
                         # 例如：1-主程序安装说明.mdx → 程序安装说明/主程序安装说明
                         clean_file_name = self.clean_name(file_name)
                         doc_id = f"{self.clean_name(folder_name)}/{clean_file_name}"
+                        
+                        # 生成英文slug用于URL路径
+                        english_folder_name = self.clean_name_for_url(folder_name)
+                        english_file_name = self.clean_name_for_url(file_name)
+                        english_slug = f"{english_folder_name}/{english_file_name}"
+                        
+                        # 使用完整语法：type: 'doc', id: 'docId', label: '...'
+                        # 注意：slug应该放在doc对象内部，但Docusaurus可能不支持
+                        # 根据文档，我们需要使用简写语法或完整语法，但不能混合
+                        # 暂时先使用简写语法，slug问题通过其他方式解决
                         lines.append(f"        '{doc_id}',")
                 
                 lines.append(f"      ],")
