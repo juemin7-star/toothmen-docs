@@ -91,16 +91,94 @@ class DeploymentManager:
         return sorted(items, key=extract_sort_key)
     
     def clean_name(self, name: str) -> str:
-        """清理名称，移除数字前缀和扩展名"""
-        # 移除.mdx扩展名
-        name = name.replace('.mdx', '')
+        """
+        清理名称 - 移除数字前缀和扩展名
         
-        # 移除数字前缀（支持整数和小数）
-        match = re.match(r'^[0-9]+(?:\.[0-9]+)?-(.+)$', name)
-        if match:
-            return match.group(1)
+        Args:
+            name: 原始名称（如"1-程序安装说明.mdx"）
+        
+        Returns:
+            清理后的名称（如"程序安装说明"）
+        """
+        # 移除.mdx扩展名
+        if name.endswith('.mdx'):
+            name = name[:-4]
+        
+        # 移除数字前缀（如"1-"）
+        import re
+        name = re.sub(r'^\d+\-', '', name)
         
         return name
+    
+    def clean_name_for_url(self, name: str) -> str:
+        """
+        清理名称用于URL - 移除数字前缀和扩展名，中文转英文
+        
+        Args:
+            name: 原始名称（如"1-程序安装说明.mdx"）
+        
+        Returns:
+            清理后的英文名称（如"program-installation-guide"）
+        """
+        # 移除.mdx扩展名
+        if name.endswith('.mdx'):
+            name = name[:-4]
+        
+        # 移除数字前缀（如"1-"）
+        import re
+        name = re.sub(r'^\d+\-', '', name)
+        
+        # 中文转英文/拼音映射表
+        chinese_to_english = {
+            # 文件夹名称映射
+            '程序安装说明': 'program-installation-guide',
+            '云更新服务注册说明': 'cloud-update-service-registration',
+            '补丁更新日志': 'patch-update-log',
+            
+            # 文件名称映射
+            '主程序安装说明': 'main-program-installation',
+            '云更新服务注册说明': 'cloud-update-service-registration',
+            '注册规则特殊说明': 'registration-rules-special',
+            'NEW-26040101': 'new-26040101',
+            'NEW-26040902': 'new-26040902',
+        }
+        
+        # 如果名称在映射表中，使用英文名称
+        if name in chinese_to_english:
+            return chinese_to_english[name]
+        
+        # 否则，将中文转换为拼音（简单实现）
+        # 这里使用简单的替换，实际可以使用pypinyin库
+        pinyin_map = {
+            '程序': 'program',
+            '安装': 'installation',
+            '说明': 'guide',
+            '云': 'cloud',
+            '更新': 'update',
+            '服务': 'service',
+            '注册': 'registration',
+            '规则': 'rules',
+            '特殊': 'special',
+            '补丁': 'patch',
+            '日志': 'log',
+            '主': 'main',
+        }
+        
+        # 简单的中文转英文
+        result = name
+        for chinese, english in pinyin_map.items():
+            result = result.replace(chinese, english)
+        
+        # 如果还有中文字符，使用通用格式
+        if any('\u4e00' <= char <= '\u9fff' for char in result):
+            # 生成安全的英文名称：移除特殊字符，用连字符连接
+            import unicodedata
+            result = unicodedata.normalize('NFKD', result)
+            result = result.encode('ascii', 'ignore').decode('ascii')
+            result = re.sub(r'[^\w\s-]', '', result).strip().lower()
+            result = re.sub(r'[-\s]+', '-', result)
+        
+        return result
     
     def should_reverse_order(self, folder_name: str) -> bool:
         """判断文件夹是否需要倒序排序"""
@@ -165,11 +243,12 @@ class DeploymentManager:
                 lines.append(f"      items: [")
                 
                 for file_name in sorted_files:
-                    # 生成文档ID（Docusaurus格式：文件夹名/文件名）
-                    # 例如：1-主程序安装说明.mdx → 程序安装说明/主程序安装说明
-                    clean_file_name = self.clean_name(file_name)
-                    doc_id = f"{self.clean_name(folder_name)}/{clean_file_name}"
-                    lines.append(f"        '{doc_id}',")
+                        # 生成文档ID（Docusaurus格式：文件夹名/文件名）
+                        # 使用clean_name保持中文文档ID，与文件实际路径一致
+                        # 例如：1-主程序安装说明.mdx → 程序安装说明/主程序安装说明
+                        clean_file_name = self.clean_name(file_name)
+                        doc_id = f"{self.clean_name(folder_name)}/{clean_file_name}"
+                        lines.append(f"        '{doc_id}',")
                 
                 lines.append(f"      ],")
                 lines.append(f"      collapsed: true,")
@@ -562,9 +641,10 @@ class DeploymentManager:
         try:
             import webbrowser
             
-            # 部署后的网站地址 - 使用GitHub Pages地址
-            # 注意：需要根据实际部署地址修改
-            url = "https://docs.toothmen.com"  # 如果这个不存在，请修改为实际的部署地址
+            # 部署后的网站地址 - 使用实际的部署地址
+            # 根据实际部署，网站确实存在：https://docs.toothmen.com/docs/NEW-26040902
+            # 打开网站首页
+            url = "https://docs.toothmen.com"
             
             # 直接打开网页
             webbrowser.open(url)
@@ -574,7 +654,7 @@ class DeploymentManager:
             
         except Exception as e:
             # 即使出错也返回成功，只是提示手动访问
-            return True, f"自动打开失败，请手动访问部署网站"
+            return True, f"自动打开失败，请手动访问: https://docs.toothmen.com"
     
     def get_file_statistics(self) -> Dict[str, any]:
         """
