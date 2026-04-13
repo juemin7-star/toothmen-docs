@@ -90,6 +90,63 @@ class DeploymentManager:
         
         return sorted(items, key=extract_sort_key)
     
+    def get_slug_from_mdx(self, file_path: Path) -> str:
+        """
+        从MDX文件中读取slug
+        
+        Args:
+            file_path: MDX文件路径
+        
+        Returns:
+            slug字符串，如果没有找到返回空字符串
+        """
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            
+            # 查找slug: 行
+            import re
+            match = re.search(r'slug:\s*["\']?([^"\'\n]+)["\']?', content)
+            if match:
+                return match.group(1).strip()
+            
+            # 如果没有slug，尝试从文件名生成
+            return ""
+        except Exception as e:
+            print(f"读取slug失败 {file_path}: {e}")
+            return ""
+    
+    def get_doc_id_from_mdx(self, file_path: Path) -> str:
+        """
+        从MDX文件中读取文档ID
+        
+        Args:
+            file_path: MDX文件路径
+        
+        Returns:
+            文档ID字符串，如果没有找到返回空字符串
+        """
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            
+            # 查找id: 行
+            import re
+            match = re.search(r'id:\s*["\']?([^"\'\n]+)["\']?', content)
+            if match:
+                id_value = match.group(1).strip()
+                # 如果id包含文件夹信息，直接返回
+                if '/' in id_value:
+                    return id_value
+                # 否则，需要结合文件夹名
+                folder_name = file_path.parent.name
+                return f"{folder_name}/{id_value}"
+            
+            return ""
+        except Exception as e:
+            print(f"读取文档ID失败 {file_path}: {e}")
+            return ""
+    
     def clean_name(self, name: str) -> str:
         """
         清理名称 - 只移除.mdx扩展名
@@ -198,7 +255,7 @@ class DeploymentManager:
     
     def generate_sidebar_content(self) -> str:
         """
-        生成侧边栏内容 - 按照排序配置文件生成
+        生成双语侧边栏内容 - 支持中英文文档
         
         Returns:
             侧边栏JavaScript代码
@@ -211,91 +268,106 @@ class DeploymentManager:
         
         # 读取排序配置文件
         sort_config_path = Path(__file__).parent / "sort_config.json"
+        
+        # 获取文件夹列表（按配置或按字母顺序）
+        folders = []
         if sort_config_path.exists():
-            with open(sort_config_path, 'r', encoding='utf-8') as f:
-                sort_config = json.load(f)
-            
-            # 按照配置的文件夹顺序生成
-            for folder_name in sort_config.get("folders", []):
-                folder_path = self.docs_folder / folder_name
-                
-                if not folder_path.exists():
-                    continue
-                
-                # 获取文件夹中的文件
-                files = []
-                for file_item in folder_path.iterdir():
-                    if file_item.is_file() and file_item.name.endswith('.mdx'):
-                        files.append(file_item.name)
-                
-                # 按照配置文件中的文件顺序
-                sorted_files = []
-                config_files = sort_config.get("files", {}).get(folder_name, [])
-                
-                # 先添加配置文件中指定的文件
-                for config_file in config_files:
-                    config_file_with_ext = f"{config_file}.mdx"
-                    if config_file_with_ext in files:
-                        sorted_files.append(config_file_with_ext)
-                
-                # 再添加其他文件（按字母顺序）
-                for file_name in sorted(files):
-                    if file_name not in sorted_files:
-                        sorted_files.append(file_name)
-                
-                if sorted_files:
-                    lines.append("    {")
-                    lines.append(f"      type: 'category',")
-                    lines.append(f"      label: '{folder_name}',")
-                    lines.append(f"      items: [")
-                    
-                    for file_name in sorted_files:
-                        # 生成文档ID（Docusaurus格式：文件夹名/文件名）
-                        # 无需清理数字前缀，因为文件夹和文件都没有数字前缀了
-                        clean_file_name = self.clean_name(file_name)
-                        doc_id = f"{folder_name}/{clean_file_name}"
-                        lines.append(f"        '{doc_id}',")
-                    
-                    lines.append(f"      ],")
-                    lines.append(f"      collapsed: true,")
-                    lines.append("    },")
-        else:
-            # 如果没有排序配置文件，按字母顺序生成
-            folders = []
+            try:
+                with open(sort_config_path, 'r', encoding='utf-8') as f:
+                    sort_config = json.load(f)
+                folders = sort_config.get("folders", [])
+                print(f"从配置文件读取文件夹: {folders}")
+            except Exception as e:
+                print(f"读取排序配置文件失败: {e}")
+                folders = []
+        
+        # 如果没有从配置文件中获取到文件夹，从文件系统获取
+        if not folders:
             for item in self.docs_folder.iterdir():
                 if item.is_dir():
                     folders.append(item.name)
+            folders = sorted(folders)
+            print(f"从文件系统获取文件夹: {folders}")
+        
+        # 为每个文件夹生成侧边栏条目
+        for folder_name in folders:
+            folder_path = self.docs_folder / folder_name
             
-            for folder_name in sorted(folders):
-                folder_path = self.docs_folder / folder_name
-                
-                # 获取文件夹中的文件
-                files = []
-                for file_item in folder_path.iterdir():
-                    if file_item.is_file() and file_item.name.endswith('.mdx'):
-                        files.append(file_item.name)
-                
-                if files:
-                    lines.append("    {")
-                    lines.append(f"      type: 'category',")
-                    lines.append(f"      label: '{folder_name}',")
-                    lines.append(f"      items: [")
+            if not folder_path.exists():
+                print(f"文件夹不存在: {folder_path}")
+                continue
+            
+            print(f"处理文件夹: {folder_name}")
+            
+            # 获取文件夹中的文件
+            files = []
+            for file_item in folder_path.iterdir():
+                if file_item.is_file() and file_item.name.endswith('.mdx'):
+                    files.append(file_item.name)
+            
+            print(f"  找到文件: {files}")
+            
+            # 按照配置文件中的文件顺序
+            sorted_files = []
+            if sort_config_path.exists():
+                try:
+                    with open(sort_config_path, 'r', encoding='utf-8') as f:
+                        sort_config = json.load(f)
+                    config_files = sort_config.get("files", {}).get(folder_name, [])
+                    print(f"  配置文件中的文件顺序: {config_files}")
                     
-                    for file_name in sorted(files):
+                    # 先添加配置文件中指定的文件
+                    for config_file in config_files:
+                        config_file_with_ext = f"{config_file}.mdx"
+                        if config_file_with_ext in files:
+                            sorted_files.append(config_file_with_ext)
+                            print(f"    添加配置文件指定的文件: {config_file_with_ext}")
+                except Exception as e:
+                    print(f"  读取文件配置失败: {e}")
+            
+            # 再添加其他文件（按字母顺序）
+            for file_name in sorted(files):
+                if file_name not in sorted_files:
+                    sorted_files.append(file_name)
+                    print(f"    添加其他文件: {file_name}")
+            
+            if sorted_files:
+                lines.append("    {")
+                lines.append(f"      type: 'category',")
+                lines.append(f"      label: '{folder_name}',")
+                lines.append(f"      items: [")
+                
+                for file_name in sorted_files:
+                    file_path = folder_path / file_name
+                    print(f"    处理文件: {file_name}")
+                    
+                    # 使用文档ID格式：文件夹名/id
+                    # 首先尝试从MDX文件中读取id
+                    doc_id = self.get_doc_id_from_mdx(file_path)
+                    print(f"      从MDX读取的文档ID: {doc_id}")
+                    
+                    if not doc_id:
+                        # 如果没有id，使用清理后的文件名
                         clean_file_name = self.clean_name(file_name)
                         doc_id = f"{folder_name}/{clean_file_name}"
-                        lines.append(f"        '{doc_id}',")
+                        print(f"      使用清理后的文件名作为文档ID: {doc_id}")
                     
-                    lines.append(f"      ],")
-                    lines.append(f"      collapsed: true,")
-                    lines.append("    },")
+                    lines.append(f"        '{doc_id}',")
+                
+                lines.append(f"      ],")
+                lines.append(f"      collapsed: true,")
+                lines.append("    },")
+            else:
+                print(f"  文件夹 {folder_name} 中没有MDX文件")
         
         lines.append("  ],")
         lines.append("};")
         lines.append("")
         lines.append("export default sidebars;")
         
-        return "\n".join(lines)
+        result = "\n".join(lines)
+        print(f"生成的侧边栏内容:\n{result}")
+        return result
     
     def update_sidebars(self):
         """

@@ -23,7 +23,6 @@ const config = {
 url: 'https://toothmen.com',
 baseUrl: '/',
 
-
   // GitHub pages deployment config - 请替换为您的信息
 organizationName: 'juemin7-star',
 projectName: 'toothmen-docs',
@@ -61,12 +60,62 @@ trailingSlash: false,
     [
       '@docusaurus/plugin-client-redirects',
       {
+        // 在开发模式下也启用重定向
+        createRedirects: function(routePath) {
+          // 这里可以添加动态重定向逻辑
+          // 返回undefined表示不创建重定向
+          return undefined;
+        },
         redirects: [
           // 防止重定向到不存在的文档
           {
             from: '/docs/NEW-26040801-补丁',
             to: '/',
           },
+          // 中文文档重定向：从旧URL（文件夹/文件名）到新URL（完整路径）
+          // 未编码版本
+          {
+            from: '/docs/主程序安装/主程序安装说明',
+            to: '/docs/安装教程/main-program-installation-guide',
+          },
+          {
+            from: '/docs/云更新服务/云更新服务注册说明',
+            to: '/docs/云更新服务说明/cloud-update-service-registration-guide',
+          },
+          {
+            from: '/docs/云更新服务/注册规则特殊说明',
+            to: '/docs/云更新服务说明/special-registration-rules',
+          },
+          {
+            from: '/docs/补丁更新日志/NEW-26040101',
+            to: '/docs/补丁更新日志/patch-new-26040101',
+          },
+          {
+            from: '/docs/补丁更新日志/NEW-26040902',
+            to: '/docs/补丁更新日志/patch-new-26040902',
+          },
+          // URL编码版本
+          {
+            from: '/docs/%E4%B8%BB%E7%A8%8B%E5%BA%8F%E5%AE%89%E8%A3%85/%E4%B8%BB%E7%A8%8B%E5%BA%8F%E5%AE%89%E8%A3%85%E8%AF%B4%E6%98%8E',
+            to: '/docs/%E5%AE%89%E8%A3%85%E6%95%99%E7%A8%8B/main-program-installation-guide',
+          },
+          {
+            from: '/docs/%E4%BA%91%E6%9B%B4%E6%96%B0%E6%9C%8D%E5%8A%A1/%E4%BA%91%E6%9B%B4%E6%96%B0%E6%9C%8D%E5%8A%A1%E6%B3%A8%E5%86%8C%E8%AF%B4%E6%98%8E',
+            to: '/docs/%E4%BA%91%E6%9B%B4%E6%96%B0%E6%9C%8D%E5%8A%A1%E8%AF%B4%E6%98%8E/cloud-update-service-registration-guide',
+          },
+          {
+            from: '/docs/%E4%BA%91%E6%9B%B4%E6%96%B0%E6%9C%8D%E5%8A%A1/%E6%B3%A8%E5%86%8C%E8%A7%84%E5%88%99%E7%89%B9%E6%AE%8A%E8%AF%B4%E6%98%8E',
+            to: '/docs/%E4%BA%91%E6%9B%B4%E6%96%B0%E6%9C%8D%E5%8A%A1%E8%AF%B4%E6%98%8E/special-registration-rules',
+          },
+          {
+            from: '/docs/%E8%A1%A5%E4%B8%81%E6%97%A5%E5%BF%97/NEW-26040101',
+            to: '/docs/%E8%A1%A5%E4%B8%81%E6%9B%B4%E6%96%B0%E6%97%A5%E5%BF%97/patch-new-26040101',
+          },
+          {
+            from: '/docs/%E8%A1%A5%E4%B8%81%E6%97%A5%E5%BF%97/NEW-26040902',
+            to: '/docs/%E8%A1%A5%E4%B8%81%E6%9B%B4%E6%96%B0%E6%97%A5%E5%BF%97/patch-new-26040902',
+          },
+
         ],
       },
     ],
@@ -108,7 +157,7 @@ trailingSlash: false,
         items: [
           {
             type: 'doc',
-            docId: '补丁日志/NEW-26040902',
+            docId: '安装教程/main-program-installation-guide',
             position: 'left',
             label: '文档',
           },

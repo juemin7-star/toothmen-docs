@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-ToothMen文档管理工具 - 完全恢复13:42正确界面版本
+ToothMen文档管理工具 v2.7 - 纯中文文档管理
 功能：文件夹分类管理 + 自动化部署工作流
 按照数字前缀文件夹结构自动生成分类侧边栏
+移除英文支持，专注于中文文档管理
 """
 
 import tkinter as tk
@@ -27,7 +28,7 @@ from mdx_checker import MDXChecker
 class ToothMenDocsManager:
     def __init__(self, root):
         self.root = root
-        self.root.title("ToothMen-DentiPro-中文版·文档管理系统 v2.3 - 新增排序控制功能")
+        self.root.title("ToothMen-DentiPro-中文版·文档管理系统 v2.7 - 纯中文文档管理")
         self.root.geometry("1400x1000")
         
         # 设置图标
@@ -51,6 +52,23 @@ class ToothMenDocsManager:
         
         # 特殊文件夹配置（需要倒序排序）
         self.reverse_order_folders = ["补丁更新日志", "patch-notes", "更新记录", "changelog"]
+        
+        # 中英文名称映射
+        self.chinese_to_english = {
+            # 文件夹映射
+            "主程序安装": "main-program-installation",
+            "云更新服务": "cloud-update-service", 
+            "补丁日志": "patch-log",
+            # 文件映射
+            "主程序安装说明.mdx": "main-program-installation-guide.mdx",
+            "云更新服务注册说明.mdx": "cloud-update-service-registration-guide.mdx",
+            "注册规则特殊说明.mdx": "special-registration-rules.mdx",
+            "NEW-26040101.mdx": "patch-new-26040101.mdx",
+            "NEW-26040902.mdx": "patch-new-26040902.mdx"
+        }
+        
+        # 反向映射（英文到中文）
+        self.english_to_chinese = {v: k for k, v in self.chinese_to_english.items()}
         
         # 加载配置
         self.config = self.load_config()
@@ -126,77 +144,105 @@ class ToothMenDocsManager:
         self.create_log_and_debug_area(main_frame)
         
     def create_folder_structure_area(self, parent):
-        """创建文件夹结构显示区域"""
-        # 文件夹结构框架
-        folder_frame = ttk.LabelFrame(parent, text="文档文件夹结构", padding="10")
-        folder_frame.grid(row=1, column=0, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(0, 10))
-        folder_frame.columnconfigure(0, weight=1)
-        folder_frame.columnconfigure(1, weight=0)  # 垂直滚动条列
-        folder_frame.columnconfigure(2, weight=0)  # 排序按钮列
-        folder_frame.rowconfigure(0, weight=1)
-        folder_frame.rowconfigure(1, weight=0)  # 水平滚动条行
+        """创建中英文文件夹结构显示区域"""
+        # 主框架
+        main_folder_frame = ttk.LabelFrame(parent, text="中英文文档结构管理", padding="10")
+        main_folder_frame.grid(row=1, column=0, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(0, 10))
         
-        # 创建Treeview显示文件夹结构 - 只显示一列，不显示类型和数量
-        self.tree = ttk.Treeview(folder_frame, show="tree")
-        self.tree.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        # 配置网格布局：左中文 | 中控制 | 右英文
+        main_folder_frame.columnconfigure(0, weight=1)  # 中文Treeview
+        main_folder_frame.columnconfigure(1, weight=0)  # 控制面板
+        main_folder_frame.columnconfigure(2, weight=1)  # 英文Treeview
+        main_folder_frame.rowconfigure(0, weight=1)
         
-        # 设置标题
-        self.tree.heading("#0", text="文件/文件夹结构")
+        # ========== 左侧：中文文档树 ==========
+        chinese_frame = ttk.Frame(main_folder_frame)
+        chinese_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), padx=(0, 5))
+        chinese_frame.columnconfigure(0, weight=1)
+        chinese_frame.rowconfigure(0, weight=1)
         
-        # 设置列宽度 - 缩小宽度，为按钮留出空间
-        self.tree.column("#0", width=400, minwidth=300)  # 缩小宽度
+        ttk.Label(chinese_frame, text="📚 中文文档", font=("Arial", 10, "bold")).grid(row=0, column=0, sticky="w", pady=(0, 5))
         
-        # 垂直滚动条
-        v_scrollbar = ttk.Scrollbar(folder_frame, orient=tk.VERTICAL, command=self.tree.yview)
-        v_scrollbar.grid(row=0, column=1, sticky=(tk.N, tk.S))
-        self.tree.config(yscrollcommand=v_scrollbar.set)
+        self.tree_chinese = ttk.Treeview(chinese_frame, show="tree")
+        self.tree_chinese.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        self.tree_chinese.heading("#0", text="文件/文件夹结构")
+        self.tree_chinese.column("#0", width=300, minwidth=200)
         
-        # 水平滚动条（文件多时方便查看）
-        h_scrollbar = ttk.Scrollbar(folder_frame, orient=tk.HORIZONTAL, command=self.tree.xview)
-        h_scrollbar.grid(row=1, column=0, sticky=(tk.W, tk.E))
-        self.tree.config(xscrollcommand=h_scrollbar.set)
+        # 中文滚动条
+        chinese_v_scroll = ttk.Scrollbar(chinese_frame, orient=tk.VERTICAL, command=self.tree_chinese.yview)
+        chinese_v_scroll.grid(row=1, column=1, sticky=(tk.N, tk.S))
+        self.tree_chinese.config(yscrollcommand=chinese_v_scroll.set)
         
-        # 创建排序按钮区域（在Treeview右侧）
-        sort_button_frame = ttk.Frame(folder_frame)
-        sort_button_frame.grid(row=0, column=2, sticky=(tk.N, tk.S), padx=(10, 0))
+        # ========== 中间：控制面板 ==========
+        control_frame = ttk.Frame(main_folder_frame)
+        control_frame.grid(row=0, column=1, sticky=(tk.N, tk.S), padx=10)
         
         # 文件夹排序按钮
-        ttk.Label(sort_button_frame, text="文件夹排序:").pack(pady=(0, 5))
+        ttk.Label(control_frame, text="📁 文件夹排序", font=("Arial", 9, "bold")).pack(pady=(10, 5))
         
-        self.btn_folder_up = tk.Button(sort_button_frame, text="⬆ 上移文件夹", 
-                                      command=self.move_folder_up, width=12)
-        self.btn_folder_up.pack(pady=2)
+        self.btn_folder_up = tk.Button(control_frame, text="⬆ 上移文件夹", 
+                                      command=self.move_folder_up_both, width=14)
+        self.btn_folder_up.pack(pady=3)
         
-        self.btn_folder_down = tk.Button(sort_button_frame, text="⬇ 下移文件夹", 
-                                        command=self.move_folder_down, width=12)
-        self.btn_folder_down.pack(pady=2)
+        self.btn_folder_down = tk.Button(control_frame, text="⬇ 下移文件夹", 
+                                        command=self.move_folder_down_both, width=14)
+        self.btn_folder_down.pack(pady=3)
         
         # 文件排序按钮
-        ttk.Label(sort_button_frame, text="文件排序:").pack(pady=(10, 5))
+        ttk.Label(control_frame, text="📄 文件排序", font=("Arial", 9, "bold")).pack(pady=(15, 5))
         
-        self.btn_file_up = tk.Button(sort_button_frame, text="⬆ 上移文件", 
-                                    command=self.move_file_up, width=12)
-        self.btn_file_up.pack(pady=2)
+        self.btn_file_up = tk.Button(control_frame, text="⬆ 上移文件", 
+                                    command=self.move_file_up_both, width=14)
+        self.btn_file_up.pack(pady=3)
         
-        self.btn_file_down = tk.Button(sort_button_frame, text="⬇ 下移文件", 
-                                      command=self.move_file_down, width=12)
-        self.btn_file_down.pack(pady=2)
+        self.btn_file_down = tk.Button(control_frame, text="⬇ 下移文件", 
+                                      command=self.move_file_down_both, width=14)
+        self.btn_file_down.pack(pady=3)
         
-        # 保存排序按钮
-        self.btn_save_sort = tk.Button(sort_button_frame, text="💾 保存排序", 
-                                      command=self.save_sort_config, width=12)
-        self.btn_save_sort.pack(pady=(20, 0))
+        # 同步按钮
+        ttk.Label(control_frame, text="🔄 同步操作", font=("Arial", 9, "bold")).pack(pady=(20, 5))
         
-        # 绑定选择事件，用于启用/禁用排序按钮
-        self.tree.bind('<<TreeviewSelect>>', self.on_tree_selection)
+        self.btn_sync_chinese_to_english = tk.Button(control_frame, text="📥 中→英同步", 
+                                                   command=self.sync_chinese_to_english, width=14)
+        self.btn_sync_chinese_to_english.pack(pady=3)
         
-        # 水平滚动条（文件多时方便查看）
-        h_scrollbar = ttk.Scrollbar(folder_frame, orient=tk.HORIZONTAL, command=self.tree.xview)
-        h_scrollbar.grid(row=1, column=0, sticky=(tk.W, tk.E))
-        self.tree.config(xscrollcommand=h_scrollbar.set)
+        self.btn_sync_english_to_chinese = tk.Button(control_frame, text="📤 英→中同步", 
+                                                   command=self.sync_english_to_chinese, width=14)
+        self.btn_sync_english_to_chinese.pack(pady=3)
+        
+        # 保存按钮
+        self.btn_save_both = tk.Button(control_frame, text="💾 保存双排序", 
+                                      command=self.save_both_sort_config, width=14, bg="#4CAF50", fg="white")
+        self.btn_save_both.pack(pady=(20, 0))
+        
+        # ========== 右侧：英文文档树 ==========
+        english_frame = ttk.Frame(main_folder_frame)
+        english_frame.grid(row=0, column=2, sticky=(tk.W, tk.E, tk.N, tk.S), padx=(5, 0))
+        english_frame.columnconfigure(0, weight=1)
+        english_frame.rowconfigure(0, weight=1)
+        
+        ttk.Label(english_frame, text="🌐 英文文档", font=("Arial", 10, "bold")).grid(row=0, column=0, sticky="w", pady=(0, 5))
+        
+        self.tree_english = ttk.Treeview(english_frame, show="tree")
+        self.tree_english.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        self.tree_english.heading("#0", text="File/Folder Structure")
+        self.tree_english.column("#0", width=300, minwidth=200)
+        
+        # 英文滚动条
+        english_v_scroll = ttk.Scrollbar(english_frame, orient=tk.VERTICAL, command=self.tree_english.yview)
+        english_v_scroll.grid(row=1, column=1, sticky=(tk.N, tk.S))
+        self.tree_english.config(yscrollcommand=english_v_scroll.set)
+        
+        # 绑定选择事件
+        self.tree_chinese.bind('<<TreeviewSelect>>', self.on_chinese_tree_selection)
+        self.tree_english.bind('<<TreeviewSelect>>', self.on_english_tree_selection)
+        
+        # 初始化时禁用所有按钮
+        self.update_button_states()
         
         # 绑定双击事件
-        self.tree.bind('<Double-Button-1>', self.on_tree_double_click)
+        self.tree_chinese.bind('<Double-Button-1>', self.on_tree_double_click)
+        self.tree_english.bind('<Double-Button-1>', self.on_tree_double_click)
         
     def create_control_area(self, parent):
         """创建控制按钮区域 - 完全按照13:42时的布局"""
@@ -339,11 +385,15 @@ class ToothMenDocsManager:
             self.log_text.update()
     
     def refresh_folder_structure(self):
-        """刷新文件夹结构显示"""
+        """刷新中英文文件夹结构显示"""
         try:
-            # 清空树
-            for item in self.tree.get_children():
-                self.tree.delete(item)
+            # 清空中文树
+            for item in self.tree_chinese.get_children():
+                self.tree_chinese.delete(item)
+            
+            # 清空英文树
+            for item in self.tree_english.get_children():
+                self.tree_english.delete(item)
             
             # 读取排序配置文件
             import json
@@ -357,10 +407,10 @@ class ToothMenDocsManager:
             total_folders = 0
             total_files = 0
             
-            # 添加根节点
-            self.tree.insert("", 0, text="📂 docs文件夹", open=True)
+            # ========== 刷新中文文档树 ==========
+            self.tree_chinese.insert("", 0, text="📂 docs文件夹 (中文)", open=True)
             
-            # 获取所有文件夹
+            # 获取所有中文文件夹
             all_folders = []
             for item in self.docs_folder.iterdir():
                 if item.is_dir():
@@ -368,22 +418,22 @@ class ToothMenDocsManager:
             
             # 按照排序配置文件的顺序显示文件夹
             display_folders = []
-            
-            # 先添加配置文件中指定的文件夹
             for folder_name in sort_config.get("folders", []):
                 if folder_name in all_folders:
                     display_folders.append(folder_name)
             
-            # 再添加其他文件夹（按字母顺序）
             for folder_name in sorted(all_folders):
                 if folder_name not in display_folders:
                     display_folders.append(folder_name)
             
-            # 添加每个文件夹到Treeview
+            # 保存每个文件夹的文件列表（用于英文树刷新）
+            folder_files_map = {}
+            
+            # 添加每个文件夹到中文Treeview
             for folder_name in display_folders:
                 total_folders += 1
                 folder_path = self.docs_folder / folder_name
-                folder_id = self.tree.insert("", tk.END, text=f"📁 {folder_name}", open=True)
+                folder_id = self.tree_chinese.insert("", tk.END, text=f"📁 {folder_name}", open=True)
                 
                 # 获取文件夹内的MDX文件
                 mdx_files = []
@@ -394,23 +444,78 @@ class ToothMenDocsManager:
                 sorted_files = []
                 config_files = sort_config.get("files", {}).get(folder_name, [])
                 
-                # 先添加配置文件中指定的文件
                 for config_file in config_files:
                     config_file_with_ext = f"{config_file}.mdx"
                     if config_file_with_ext in mdx_files:
                         sorted_files.append(config_file_with_ext)
                 
-                # 再添加其他文件（按字母顺序）
                 for file_name in sorted(mdx_files):
                     if file_name not in sorted_files:
                         sorted_files.append(file_name)
                 
+                # 保存到映射表
+                folder_files_map[folder_name] = sorted_files
+                
                 # 添加文件节点
                 for file_name in sorted_files:
                     total_files += 1
-                    self.tree.insert(folder_id, tk.END, text=f"📄 {file_name}")
+                    self.tree_chinese.insert(folder_id, tk.END, text=f"📄 {file_name}")
             
-            self.log_message(f"文件夹结构已刷新，共{total_folders}个分类，{total_files}个MDX文件", "success")
+            # ========== 刷新英文文档树 ==========
+            # 英文文档路径 - 使用绝对路径避免相对路径问题
+            try:
+                # 方法1：使用项目路径（更可靠）
+                english_docs_path = self.project_path / "i18n" / "en" / "docusaurus-plugin-content-docs" / "current"
+                
+                # 调试信息
+                debug_info = f"英文路径检查: {english_docs_path}"
+                print(f"[DEBUG] {debug_info}")  # 控制台输出
+                
+                if english_docs_path.exists():
+                    self.log_message(f"英文目录存在: {english_docs_path}", "info")
+                    self.tree_english.insert("", 0, text="📂 docs文件夹 (英文)", open=True)
+                    
+                    # 获取所有英文文件夹（使用映射关系）
+                    for folder_name in display_folders:
+                        # 获取对应的英文文件夹名
+                        english_folder_name = self.chinese_to_english.get(folder_name, folder_name)
+                        folder_english_path = english_docs_path / english_folder_name
+                        
+                        if folder_english_path.exists():
+                            folder_id = self.tree_english.insert("", tk.END, text=f"📁 {english_folder_name}", open=True)
+                            
+                            # 获取英文文件夹内的MDX文件
+                            english_mdx_files = []
+                            for file in folder_english_path.glob("*.mdx"):
+                                english_mdx_files.append(file.name)
+                            
+                            # 获取该文件夹对应的文件列表
+                            folder_sorted_files = folder_files_map.get(folder_name, [])
+                            
+                            # 按照相同的顺序添加文件
+                            for file_name in folder_sorted_files:
+                                # 查找对应的英文文件名
+                                english_file_name = self.chinese_to_english.get(file_name, file_name)
+                                if english_file_name in english_mdx_files:
+                                    self.tree_english.insert(folder_id, tk.END, text=f"📄 {english_file_name}")
+                                else:
+                                    # 如果英文文件不存在，显示占位符
+                                    self.tree_english.insert(folder_id, tk.END, text=f"❓ {file_name} (未翻译)")
+                        else:
+                            # 如果英文文件夹不存在，显示占位符
+                            folder_id = self.tree_english.insert("", tk.END, text=f"⚠️ {english_folder_name} (文件夹未创建)", open=True)
+                            self.log_message(f"英文文件夹不存在: {english_folder_name}", "warning")
+                else:
+                    self.tree_english.insert("", 0, text="⚠️ 英文文档目录不存在", open=True)
+                    self.log_message("警告：英文文档目录不存在，请先创建英文文档", "warning")
+                    # 详细调试信息
+                    self.log_message(f"路径检查失败: {english_docs_path}", "debug")
+                    
+            except Exception as e:
+                self.log_message(f"刷新英文树时出错: {str(e)}", "error")
+                self.tree_english.insert("", 0, text="⚠️ 英文文档检查出错", open=True)
+            
+            self.log_message(f"中英文文件夹结构已刷新，共{total_folders}个分类，{total_files}个MDX文件", "success")
             
         except Exception as e:
             self.log_message(f"刷新文件夹结构失败: {str(e)}", "error")
@@ -427,15 +532,41 @@ class ToothMenDocsManager:
     
     def on_tree_double_click(self, event):
         """树形结构双击事件"""
-        item = self.tree.selection()[0]
-        values = self.tree.item(item, "values")
-        if values and values[0] == "MDX文件":
-            file_path = values[1]
-            try:
-                os.startfile(file_path)
-                self.log_message(f"已打开文件: {file_path}", "info")
-            except Exception as e:
-                self.log_message(f"打开文件失败: {str(e)}", "error")
+        # 确定是哪个树被双击
+        widget = event.widget
+        
+        if widget == self.tree_chinese:
+            tree = self.tree_chinese
+            base_path = self.docs_folder
+        elif widget == self.tree_english:
+            tree = self.tree_english
+            base_path = Path(__file__).parent.parent / "i18n" / "en" / "docusaurus-plugin-content-docs" / "current"
+        else:
+            return
+        
+        selection = tree.selection()
+        if not selection:
+            return
+        
+        item = selection[0]
+        item_text = tree.item(item, "text")
+        
+        # 检查是否是文件
+        if item_text.startswith("📄"):
+            # 获取文件路径
+            file_name = item_text[2:]  # 去掉"📄 "前缀
+            folder_name = tree.item(tree.parent(item), "text")[2:]  # 去掉"📁 "前缀
+            
+            file_path = base_path / folder_name / file_name
+            
+            if file_path.exists():
+                try:
+                    os.startfile(file_path)
+                    self.log_message(f"已打开文件: {file_path}", "info")
+                except Exception as e:
+                    self.log_message(f"打开文件失败: {str(e)}", "error")
+            else:
+                self.log_message(f"文件不存在: {file_path}", "error")
     
     def check_mdx_syntax(self):
         """检测MDX语法"""
@@ -881,166 +1012,331 @@ class ToothMenDocsManager:
         self.log_message(f"npm路径: {self.config.get('npm_path', 'npm')}")     
         self.log_message(f"Git路径: {self.config.get('git_path', '未设置')}")
     
-    def on_tree_selection(self, event):
-        """处理Treeview选择事件，启用/禁用排序按钮"""
-        selection = self.tree.selection()
-        if not selection:
-            # 没有选择，禁用所有排序按钮
-            self.btn_folder_up.config(state="disabled")
-            self.btn_folder_down.config(state="disabled")
-            self.btn_file_up.config(state="disabled")
-            self.btn_file_down.config(state="disabled")
-            return
-        
-        item_id = selection[0]
-        item = self.tree.item(item_id)
-        
-        # 检查是文件夹还是文件
-        parent_id = self.tree.parent(item_id)
-        
-        if parent_id == "":
-            # 这是文件夹
-            self.btn_folder_up.config(state="normal")
-            self.btn_folder_down.config(state="normal")
-            self.btn_file_up.config(state="disabled")
-            self.btn_file_down.config(state="disabled")
-        else:
-            # 这是文件
-            self.btn_folder_up.config(state="disabled")
-            self.btn_folder_down.config(state="disabled")
-            self.btn_file_up.config(state="normal")
-            self.btn_file_down.config(state="normal")
+    def on_chinese_tree_selection(self, event):
+        """处理中文Treeview选择事件"""
+        self.update_button_states()
     
-    def move_folder_up(self):
-        """上移选中的文件夹"""
-        selection = self.tree.selection()
-        if not selection:
-            return
-        
-        item_id = selection[0]
-        parent_id = self.tree.parent(item_id)
-        
-        # 只有顶级文件夹可以移动
-        if parent_id != "":
-            return
-        
-        # 获取所有同级文件夹
-        siblings = list(self.tree.get_children(parent_id))
-        index = siblings.index(item_id)
-        
-        if index > 0:
-            # 上移
-            self.tree.move(item_id, parent_id, index - 1)
-            self.log_message(f"文件夹上移: {self.tree.item(item_id)['text']}", "info")
+    def on_english_tree_selection(self, event):
+        """处理英文Treeview选择事件"""
+        self.update_button_states()
     
-    def move_folder_down(self):
-        """下移选中的文件夹"""
-        selection = self.tree.selection()
-        if not selection:
+    def update_button_states(self):
+        """更新按钮状态"""
+        # 获取中文和英文的选择
+        chinese_selection = self.tree_chinese.selection()
+        english_selection = self.tree_english.selection()
+        
+        # 默认禁用所有按钮
+        self.btn_folder_up.config(state=tk.DISABLED)
+        self.btn_folder_down.config(state=tk.DISABLED)
+        self.btn_file_up.config(state=tk.DISABLED)
+        self.btn_file_down.config(state=tk.DISABLED)
+        
+        # 检查是否有选择
+        if not chinese_selection and not english_selection:
             return
         
-        item_id = selection[0]
-        parent_id = self.tree.parent(item_id)
+        # 优先使用中文选择，如果没有则使用英文选择
+        selection = chinese_selection if chinese_selection else english_selection
+        tree = self.tree_chinese if chinese_selection else self.tree_english
         
-        # 只有顶级文件夹可以移动
-        if parent_id != "":
-            return
-        
-        # 获取所有同级文件夹
-        siblings = list(self.tree.get_children(parent_id))
-        index = siblings.index(item_id)
-        
-        if index < len(siblings) - 1:
-            # 下移
-            self.tree.move(item_id, parent_id, index + 1)
-            self.log_message(f"文件夹下移: {self.tree.item(item_id)['text']}", "info")
+        if selection:
+            item_text = tree.item(selection[0], "text")
+            # 判断选中的是文件夹还是文件
+            if item_text.startswith("📁"):
+                # 选中文件夹，启用文件夹排序按钮
+                self.btn_folder_up.config(state=tk.NORMAL)
+                self.btn_folder_down.config(state=tk.NORMAL)
+            elif item_text.startswith("📄"):
+                # 选中文件，启用文件排序按钮
+                self.btn_file_up.config(state=tk.NORMAL)
+                self.btn_file_down.config(state=tk.NORMAL)
     
-    def move_file_up(self):
-        """上移选中的文件"""
-        selection = self.tree.selection()
+    def move_folder_up_both(self):
+        """同时上移中英文文件夹"""
+        self.move_folder_up(self.tree_chinese)
+        self.move_folder_up(self.tree_english)
+        self.log_message("中英文文件夹已同时上移", "success")
+    
+    def move_folder_down_both(self):
+        """同时下移中英文文件夹"""
+        self.move_folder_down(self.tree_chinese)
+        self.move_folder_down(self.tree_english)
+        self.log_message("中英文文件夹已同时下移", "success")
+    
+    def move_file_up_both(self):
+        """同时上移中英文文件"""
+        self.move_file_up(self.tree_chinese)
+        self.move_file_up(self.tree_english)
+        self.log_message("中英文文件已同时上移", "success")
+    
+    def move_file_down_both(self):
+        """同时下移中英文文件"""
+        self.move_file_down(self.tree_chinese)
+        self.move_file_down(self.tree_english)
+        self.log_message("中英文文件已同时下移", "success")
+    
+    def move_folder_up(self, tree):
+        """上移文件夹（通用方法）"""
+        selection = tree.selection()
         if not selection:
             return
         
         item_id = selection[0]
-        parent_id = self.tree.parent(item_id)
+        item_text = tree.item(item_id, "text")
         
-        # 只有文件可以移动（有父级）
-        if parent_id == "":
+        if not item_text.startswith("📁"):
             return
         
-        # 获取所有同级文件
-        siblings = list(self.tree.get_children(parent_id))
-        index = siblings.index(item_id)
+        # 获取父节点和兄弟节点
+        parent = tree.parent(item_id)
+        siblings = list(tree.get_children(parent))
         
-        if index > 0:
-            # 上移
-            self.tree.move(item_id, parent_id, index - 1)
-            self.log_message(f"文件上移: {self.tree.item(item_id)['text']}", "info")
+        if item_id in siblings:
+            index = siblings.index(item_id)
+            if index > 0:
+                # 交换位置
+                tree.move(item_id, parent, index - 1)
     
-    def move_file_down(self):
-        """下移选中的文件"""
-        selection = self.tree.selection()
+    def move_folder_down(self, tree):
+        """下移文件夹（通用方法）"""
+        selection = tree.selection()
         if not selection:
             return
         
         item_id = selection[0]
-        parent_id = self.tree.parent(item_id)
+        item_text = tree.item(item_id, "text")
         
-        # 只有文件可以移动（有父级）
-        if parent_id == "":
+        if not item_text.startswith("📁"):
             return
         
-        # 获取所有同级文件
-        siblings = list(self.tree.get_children(parent_id))
-        index = siblings.index(item_id)
+        # 获取父节点和兄弟节点
+        parent = tree.parent(item_id)
+        siblings = list(tree.get_children(parent))
         
-        if index < len(siblings) - 1:
-            # 下移
-            self.tree.move(item_id, parent_id, index + 1)
-            self.log_message(f"文件下移: {self.tree.item(item_id)['text']}", "info")
+        if item_id in siblings:
+            index = siblings.index(item_id)
+            if index < len(siblings) - 1:
+                # 交换位置
+                tree.move(item_id, parent, index + 1)
     
-    def save_sort_config(self):
-        """保存排序配置到文件"""
+    def move_file_up(self, tree):
+        """上移文件（通用方法）"""
+        selection = tree.selection()
+        if not selection:
+            return
+        
+        item_id = selection[0]
+        item_text = tree.item(item_id, "text")
+        
+        if not item_text.startswith("📄"):
+            return
+        
+        # 获取父节点和兄弟节点
+        parent = tree.parent(item_id)
+        siblings = list(tree.get_children(parent))
+        
+        if item_id in siblings:
+            index = siblings.index(item_id)
+            if index > 0:
+                # 交换位置
+                tree.move(item_id, parent, index - 1)
+    
+    def move_file_down(self, tree):
+        """下移文件（通用方法）"""
+        selection = tree.selection()
+        if not selection:
+            return
+        
+        item_id = selection[0]
+        item_text = tree.item(item_id, "text")
+        
+        if not item_text.startswith("📄"):
+            return
+        
+        # 获取父节点和兄弟节点
+        parent = tree.parent(item_id)
+        siblings = list(tree.get_children(parent))
+        
+        if item_id in siblings:
+            index = siblings.index(item_id)
+            if index < len(siblings) - 1:
+                # 交换位置
+                tree.move(item_id, parent, index + 1)
+    
+    def sync_chinese_to_english(self):
+        """将中文排序同步到英文"""
         try:
-            import json
+            # 获取中文树的所有文件夹和文件顺序
+            chinese_folders = []
+            chinese_files_by_folder = {}
             
-            # 从Treeview中提取排序信息
+            # 获取文件夹顺序
+            root_children = self.tree_chinese.get_children()
+            for folder_id in root_children:
+                folder_text = self.tree_chinese.item(folder_id, "text")
+                if folder_text.startswith("📁"):
+                    folder_name = folder_text[2:]  # 去掉"📁 "前缀
+                    chinese_folders.append(folder_name)
+                    
+                    # 获取文件顺序
+                    file_items = self.tree_chinese.get_children(folder_id)
+                    files = []
+                    for file_id in file_items:
+                        file_text = self.tree_chinese.item(file_id, "text")
+                        if file_text.startswith("📄"):
+                            file_name = file_text[2:]  # 去掉"📄 "前缀
+                            files.append(file_name)
+                    
+                    chinese_files_by_folder[folder_name] = files
+            
+            # 更新英文树
+            # 先清空英文树
+            for item in self.tree_english.get_children():
+                self.tree_english.delete(item)
+            
+            # 重新添加英文树
+            self.tree_english.insert("", 0, text="📂 docs文件夹 (英文)", open=True)
+            
+            # 英文文档路径
+            english_docs_path = Path(__file__).parent.parent / "i18n" / "en" / "docusaurus-plugin-content-docs" / "current"
+            
+            for chinese_folder_name in chinese_folders:
+                # 获取对应的英文文件夹名
+                english_folder_name = self.chinese_to_english.get(chinese_folder_name, chinese_folder_name)
+                folder_english_path = english_docs_path / english_folder_name
+                
+                if folder_english_path.exists():
+                    folder_id = self.tree_english.insert("", tk.END, text=f"📁 {english_folder_name}", open=True)
+                    
+                    # 获取英文文件夹内的MDX文件
+                    english_mdx_files = []
+                    for file in folder_english_path.glob("*.mdx"):
+                        english_mdx_files.append(file.name)
+                    
+                    # 按照中文顺序添加文件（使用映射关系）
+                    for chinese_file_name in chinese_files_by_folder.get(chinese_folder_name, []):
+                        english_file_name = self.chinese_to_english.get(chinese_file_name, chinese_file_name)
+                        if english_file_name in english_mdx_files:
+                            self.tree_english.insert(folder_id, tk.END, text=f"📄 {english_file_name}")
+                        else:
+                            self.tree_english.insert(folder_id, tk.END, text=f"❓ {chinese_file_name} (未翻译)")
+                else:
+                    folder_id = self.tree_english.insert("", tk.END, text=f"⚠️ {english_folder_name} (文件夹未创建)", open=True)
+            
+            self.log_message("中文排序已同步到英文", "success")
+            
+        except Exception as e:
+            self.log_message(f"同步中文到英文失败: {str(e)}", "error")
+    
+    def sync_english_to_chinese(self):
+        """将英文排序同步到中文"""
+        try:
+            # 获取英文树的所有文件夹和文件顺序
+            english_folders = []
+            english_files_by_folder = {}
+            
+            # 获取文件夹顺序
+            root_children = self.tree_english.get_children()
+            for folder_id in root_children:
+                folder_text = self.tree_english.item(folder_id, "text")
+                if folder_text.startswith("📁"):
+                    folder_name = folder_text[2:]  # 去掉"📁 "前缀
+                    english_folders.append(folder_name)
+                    
+                    # 获取文件顺序
+                    file_items = self.tree_english.get_children(folder_id)
+                    files = []
+                    for file_id in file_items:
+                        file_text = self.tree_english.item(file_id, "text")
+                        if file_text.startswith("📄"):
+                            file_name = file_text[2:]  # 去掉"📄 "前缀
+                            files.append(file_name)
+                    
+                    english_files_by_folder[folder_name] = files
+            
+            # 更新中文树
+            # 先清空中文树
+            for item in self.tree_chinese.get_children():
+                self.tree_chinese.delete(item)
+            
+            # 重新添加中文树
+            self.tree_chinese.insert("", 0, text="📂 docs文件夹 (中文)", open=True)
+            
+            for english_folder_name in english_folders:
+                # 获取对应的中文文件夹名
+                chinese_folder_name = self.english_to_chinese.get(english_folder_name, english_folder_name)
+                folder_path = self.docs_folder / chinese_folder_name
+                
+                if folder_path.exists():
+                    folder_id = self.tree_chinese.insert("", tk.END, text=f"📁 {chinese_folder_name}", open=True)
+                    
+                    # 获取中文文件夹内的MDX文件
+                    mdx_files = []
+                    for file in folder_path.glob("*.mdx"):
+                        mdx_files.append(file.name)
+                    
+                    # 按照英文顺序添加文件（使用映射关系）
+                    for english_file_name in english_files_by_folder.get(english_folder_name, []):
+                        chinese_file_name = self.english_to_chinese.get(english_file_name, english_file_name)
+                        if chinese_file_name in mdx_files:
+                            self.tree_chinese.insert(folder_id, tk.END, text=f"📄 {chinese_file_name}")
+                        else:
+                            self.tree_chinese.insert(folder_id, tk.END, text=f"❓ {english_file_name} (文件不存在)")
+                else:
+                    folder_id = self.tree_chinese.insert("", tk.END, text=f"⚠️ {chinese_folder_name} (文件夹不存在)", open=True)
+            
+            self.log_message("英文排序已同步到中文", "success")
+            
+        except Exception as e:
+            self.log_message(f"同步英文到中文失败: {str(e)}", "error")
+    
+    def save_both_sort_config(self):
+        """保存中英文排序配置"""
+        try:
+            # 使用中文树的顺序作为基准
+            folders = []
+            files_by_folder = {}
+            
+            # 获取文件夹顺序
+            root_children = self.tree_chinese.get_children()
+            for folder_id in root_children:
+                folder_text = self.tree_chinese.item(folder_id, "text")
+                if folder_text.startswith("📁"):
+                    folder_name = folder_text[2:]  # 去掉"📁 "前缀
+                    folders.append(folder_name)
+                    
+                    # 获取文件顺序
+                    file_items = self.tree_chinese.get_children(folder_id)
+                    files = []
+                    for file_id in file_items:
+                        file_text = self.tree_chinese.item(file_id, "text")
+                        if file_text.startswith("📄"):
+                            file_name = file_text[2:]  # 去掉"📄 "前缀
+                            # 去掉.mdx扩展名
+                            if file_name.endswith(".mdx"):
+                                file_name = file_name[:-4]
+                            files.append(file_name)
+                    
+                    files_by_folder[folder_name] = files
+            
+            # 保存到配置文件
+            import json
             sort_config = {
-                "folders": [],
-                "files": {}
+                "folders": folders,
+                "files": files_by_folder
             }
             
-            # 获取所有顶级文件夹（按显示顺序）
-            folder_items = self.tree.get_children("")
-            for folder_id in folder_items:
-                folder_display_name = self.tree.item(folder_id)["text"]
-                # 清理文件夹名称（移除表情符号和空格）
-                folder_name = folder_display_name.replace("📁 ", "").strip()
-                sort_config["folders"].append(folder_name)
-                
-                # 获取该文件夹下的文件（按显示顺序）
-                file_items = self.tree.get_children(folder_id)
-                file_names = []
-                for file_id in file_items:
-                    file_display_name = self.tree.item(file_id)["text"]
-                    # 清理文件名称（移除表情符号和.mdx扩展名）
-                    file_name = file_display_name.replace("📄 ", "").strip()
-                    if file_name.endswith(".mdx"):
-                        file_name = file_name[:-4]
-                    file_names.append(file_name)
-                
-                sort_config["files"][folder_name] = file_names
-            
-            # 保存到文件
-            config_path = Path(__file__).parent / "sort_config.json"
-            with open(config_path, 'w', encoding='utf-8') as f:
+            sort_config_path = Path(__file__).parent / "sort_config.json"
+            with open(sort_config_path, 'w', encoding='utf-8') as f:
                 json.dump(sort_config, f, ensure_ascii=False, indent=2)
             
-            self.log_message("✅ 排序配置已保存", "success")
-            self.log_message(f"📁 文件夹顺序: {', '.join(sort_config['folders'])}", "info")
+            self.log_message("中英文排序配置已保存", "success")
             
         except Exception as e:
             self.log_message(f"保存排序配置失败: {str(e)}", "error")
+    
+    # 旧的排序方法已删除，使用新的中英文同步方法
 
 def main():
     root = tk.Tk()

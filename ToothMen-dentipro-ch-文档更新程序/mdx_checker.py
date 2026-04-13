@@ -98,9 +98,14 @@ class MDXChecker:
             # 查找开始标签
             for match in re.finditer(jsx_pattern, line):
                 tag_name = match.group(1)
-                # 检查是否是自闭合标签
-                if line[match.end()-2] == '/':
+                # 检查是否是自闭合标签（检查当前行和下一行）
+                tag_end = match.end()
+                # 获取从匹配开始到行尾的内容
+                line_remaining = line[tag_end:]
+                # 检查当前行是否有自闭合符号
+                if '/>' in line_remaining:
                     continue
+                # 如果不是自闭合，添加到栈中
                 tag_stack.append((tag_name, i, match.start()))
             
             # 查找结束标签
@@ -128,25 +133,34 @@ class MDXChecker:
         html_tags = ['iframe', 'div', 'span', 'p', 'ul', 'ol', 'li', 'table', 'tr', 'td', 'th']
         
         for tag in html_tags:
-            # 查找开始标签
+            # 查找开始标签（包括自闭合标签）
             start_pattern = rf'<{tag}(?:\s+[^>]*)?>'
             # 查找结束标签
             end_pattern = rf'</{tag}>'
+            # 查找自闭合标签
+            self_closing_pattern = rf'<{tag}(?:\s+[^>]*)?/>'
             
-            start_count = len(re.findall(start_pattern, content, re.IGNORECASE))
+            # 计算开始标签数量（不包括自闭合标签）
+            start_matches = re.findall(start_pattern, content, re.IGNORECASE)
+            self_closing_matches = re.findall(self_closing_pattern, content, re.IGNORECASE)
+            
+            # 真正的开始标签数量 = 总开始标签 - 自闭合标签
+            start_count = len(start_matches) - len(self_closing_matches)
             end_count = len(re.findall(end_pattern, content, re.IGNORECASE))
             
             if start_count > end_count:
                 # 找到第一个未闭合的标签位置
                 for i, line in enumerate(lines, 1):
                     if re.search(start_pattern, line, re.IGNORECASE):
-                        issues.append({
-                            'type': '未闭合的HTML标签',
-                            'line': i,
-                            'message': f'HTML标签 <{tag}> 没有闭合',
-                            'suggestion': f'添加 </{tag}> 标签或使用自闭合语法 <{tag} ... />'
-                        })
-                        break
+                        # 检查这一行是否包含自闭合标签
+                        if not re.search(self_closing_pattern, line, re.IGNORECASE):
+                            issues.append({
+                                'type': '未闭合的HTML标签',
+                                'line': i,
+                                'message': f'HTML标签 <{tag}> 没有闭合',
+                                'suggestion': f'添加 </{tag}> 标签或使用自闭合语法 <{tag} ... />'
+                            })
+                            break
         
         return issues
     

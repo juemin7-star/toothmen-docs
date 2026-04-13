@@ -48,7 +48,7 @@ echo.
 echo block_cipher = None
 echo.
 echo a = Analysis(
-echo     ['main.py'],
+echo     ['main_correct_layout.py'],
 echo     pathex=[],
 echo     binaries=[],
 echo     datas=[

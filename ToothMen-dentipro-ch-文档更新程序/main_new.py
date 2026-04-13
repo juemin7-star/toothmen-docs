@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+﻿﻿#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 ToothMen鏂囨。绠＄悊宸ュ叿 - 鍏ㄦ柊鐗堟湰

@@ -1,12 +1,17 @@
-# -*- mode: python ; coding: utf-8 -*-
+﻿# -*- mode: python ; coding: utf-8 -*-
 
+block_cipher = None
 
 a = Analysis(
-    ['main_pure_chinese_fixed.py'],
+    ['main_correct_layout.py'],
     pathex=[],
     binaries=[],
-    datas=[('config_new.json', '.'), ('deployment_manager_new.py', '.'), ('mdx_checker.py', '.'), ('logger.py', '.'), ('sort_config.json', '.')],
-    hiddenimports=['tkinter', 'pathlib', 'json', 're', 'threading', 'subprocess', 'os', 'sys', 'time', 'shutil', 'webbrowser', 'urllib.parse', 'urllib.request', 'urllib.error', 'unicodedata'],
+    datas=[
+        ('config.json', '.'),
+        ('requirements.txt', '.'),
+        ('sort_config.json', '.'),
+    ],
+    hiddenimports=[],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
@@ -14,6 +19,7 @@ a = Analysis(
     noarchive=False,
     optimize=0,
 )
+
 pyz = PYZ(a.pure)
 
 exe = EXE(
@@ -22,7 +28,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name='ToothMenDocsManager',
+    name='ToothMenDocsManager_v2_6',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -35,4 +41,15 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+)
+
+coll = COLLECT(
+    exe,
+    a.binaries,
+    a.zipfiles,
+    a.datas,
+    strip=False,
+    upx=True,
+    upx_exclude=[],
+    name='ToothMenDocsManager_v2_6',
 )

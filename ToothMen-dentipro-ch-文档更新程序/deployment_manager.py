@@ -119,7 +119,7 @@ class DeploymentManager:
         
         return "\n".join(lines)
     
-    def run_command(self, command, args, cwd=None, timeout=300, use_shell=None):
+    def run_command(self, command, args, cwd=None, timeout=300, use_shell=None, env=None):
         """
         运行命令行命令
         
@@ -129,6 +129,7 @@ class DeploymentManager:
             cwd: 工作目录
             timeout: 超时时间（秒）
             use_shell: 是否使用shell（None表示自动判断）
+            env: 环境变量字典
         
         Returns:
             (success, output)
@@ -165,7 +166,8 @@ class DeploymentManager:
                     encoding='utf-8',
                     errors='replace',  # 替换无法解码的字符
                     timeout=timeout,
-                    shell=True
+                    shell=True,
+                    env=env
                 )
             else:
                 # 使用列表形式
@@ -188,7 +190,8 @@ class DeploymentManager:
                     encoding='utf-8',
                     errors='replace',  # 替换无法解码的字符
                     timeout=timeout,
-                    shell=False
+                    shell=False,
+                    env=env
                 )
             
             output = result.stdout
@@ -278,8 +281,23 @@ class DeploymentManager:
             if not success1:
                 return False, f"清除缓存失败:\n{output1}"
             
-            # 2. 执行构建
-            success2, output2 = self.run_command(self.npm_path, ["run", "build"])
+            # 2. 执行构建 - 添加环境变量禁用调试
+            import os
+            env = os.environ.copy()
+            env["NODE_ENV"] = "production"
+            
+            # 使用docusaurus build命令，而不是npm run build，以便添加参数
+            success2, output2 = self.run_command(
+                "npx", 
+                ["docusaurus", "build", "--no-debug"],
+                env=env
+            )
+            
+            # 如果上面的命令失败，回退到npm run build
+            if not success2:
+                # 在输出中添加警告信息
+                output2 = f"使用--no-debug参数构建失败，尝试标准构建...\n{output2}"
+                success2, output2 = self.run_command(self.npm_path, ["run", "build"], env=env)
             
             return success2, output2
             
