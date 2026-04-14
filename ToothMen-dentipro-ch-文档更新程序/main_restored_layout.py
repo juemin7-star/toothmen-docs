@@ -51,7 +51,7 @@ class ToothMenDocsManager:
         
         # 初始化按钮列表（确保在create_widgets之前初始化）
         self.step_buttons = []
-        self.deployment_steps = ["刷新文件结构", "生成侧边栏", "本地构建测试", "本地预览", "在线部署"]
+        self.deployment_steps = ["保存顺序", "生成侧边栏", "本地构建测试", "本地预览", "在线部署"]
         
         # 显示加载提示
         self.loading_label = ttk.Label(self.root, text="正在初始化程序，请稍候...", 
@@ -86,7 +86,7 @@ class ToothMenDocsManager:
             # 部署流程状态
             self.deployment_started = False
             self.deployment_steps = [
-                "刷新文件结构",
+                "保存顺序",
                 "生成侧边栏",
                 "本地构建测试",
                 "本地预览",
@@ -530,6 +530,12 @@ module.exports = config;"""
         sort_frame = ttk.Frame(folder_frame)
         sort_frame.grid(row=0, column=1, sticky=(tk.N, tk.S), padx=(10, 0))
         
+        # 独立按钮：刷新文件结构（不参与流程步骤）
+        self.btn_refresh_structure = tk.Button(
+            sort_frame, text="🔄 刷新文件结构", command=self.refresh_folder_structure, width=14
+        )
+        self.btn_refresh_structure.pack(pady=(8, 8))
+        
         # 文件夹排序标题
         folder_sort_label = ttk.Label(sort_frame, text="📁 文件夹排序", font=("Arial", 10, "bold"))
         folder_sort_label.pack(pady=(10, 5))
@@ -558,11 +564,8 @@ module.exports = config;"""
                                       command=self.move_file_down, width=14, state=tk.DISABLED)
         self.btn_file_down.pack(pady=3)
         
-        # 保存排序按钮（初始禁用）
-        self.btn_save_sort = tk.Button(sort_frame, text="💾 保存排序", 
-                                      command=self.save_sort_config, width=14, 
-                                      state=tk.DISABLED)
-        self.btn_save_sort.pack(pady=(20, 0))
+        # 右侧“保存排序”按钮已按需求移除（仅保留流程里的“保存顺序”步骤）
+        self.btn_save_sort = None
         
         # 绑定双击事件
         self.tree.bind('<Double-Button-1>', self.on_tree_double_click)
@@ -599,6 +602,10 @@ module.exports = config;"""
         # 验证部署按钮（第一行第五个）- 位置调整（删除开始部署按钮）
         self.verify_deploy_btn = ttk.Button(row1_frame, text="验证部署", command=self.verify_deployment)
         self.verify_deploy_btn.grid(row=0, column=4, padx=5)
+        
+        # 生成有效链接按钮（避免历史坏链）
+        self.valid_links_btn = ttk.Button(row1_frame, text="有效链接", command=self.show_valid_doc_links)
+        self.valid_links_btn.grid(row=0, column=5, padx=5)
         
         # 第二行：部署步骤按钮
         row2_frame = ttk.Frame(control_frame)
@@ -897,7 +904,7 @@ module.exports = config;"""
             try:
                 self.log("🔓 开始流程：启用第一个部署步骤按钮", "info")
                 self.log("📋 请按顺序点击下面的按钮：", "info")
-                self.log("  1. 刷新文件结构", "info")
+                self.log("  1. 保存顺序", "info")
                 self.log("  2. 生成侧边栏", "info")
                 self.log("  3. 本地构建测试", "info")
                 self.log("  4. 本地预览", "info")
@@ -906,7 +913,7 @@ module.exports = config;"""
                 # 调试信息：检查step_buttons状态
                 self.log(f"🔍 调试：step_buttons数量 = {len(self.step_buttons) if self.step_buttons else 0}", "debug")
                 
-                # 启用第一个部署步骤按钮（刷新文件结构）
+                # 启用第一个部署步骤按钮
                 if self.step_buttons and len(self.step_buttons) > 0:
                     self.log(f"🔍 调试：正在启用按钮 '{self.deployment_steps[0]}'", "debug")
                     self.set_button_state(self.step_buttons[0], "normal")
@@ -924,7 +931,7 @@ module.exports = config;"""
                 self.set_button_state(self.start_workflow_btn, "disabled")
                 self.set_button_state(self.deploy_end_btn, "normal")
                 
-                self.log("✅ 第一个步骤按钮已启用，请点击'刷新文件结构'开始", "success")
+                self.log(f"✅ 第一个步骤按钮已启用，请点击'{self.deployment_steps[0]}'开始", "success")
                 self.set_button_state(self.start_workflow_btn, "success")
                 # 1秒后恢复为禁用状态（保持禁用）
                 self.root.after(1000, lambda: self.set_button_state(self.start_workflow_btn, "disabled"))
@@ -988,10 +995,14 @@ module.exports = config;"""
         self.log(f"▶️  执行步骤: {step}", "info")
         
         # 根据步骤执行相应操作
-        if step == "刷新文件结构":
-            self.refresh_folder_structure()
-            # 立即启用下一个按钮（因为refresh_folder_structure是同步的）
-            self.enable_next_step()
+        if step == "保存顺序":
+            success = self.save_sort_config()
+            if success:
+                self.enable_next_step()
+            else:
+                if self.current_step_index < len(self.step_buttons):
+                    self.set_button_state(self.step_buttons[self.current_step_index], "error")
+                    self.root.after(1000, lambda idx=self.current_step_index: self.set_button_state(self.step_buttons[idx], "disabled"))
         elif step == "生成侧边栏":
             self.generate_sidebar()
         elif step == "本地构建测试":
@@ -1558,6 +1569,66 @@ module.exports = config;"""
         thread.daemon = True
         thread.start()
     
+    def show_valid_doc_links(self):
+        """自动生成并显示当前有效文档链接（基于sidebars.js中的文档ID）"""
+        self.log("🔗 开始生成当前有效文档链接...", "info")
+        
+        try:
+            if not self.sidebars_path.exists():
+                self.log(f"❌ sidebars文件不存在: {self.sidebars_path}", "error")
+                return
+            
+            with open(self.sidebars_path, "r", encoding="utf-8") as f:
+                content = f.read()
+            
+            import re
+            from urllib.parse import quote
+            
+            doc_ids = []
+            
+            # 1) 兼容对象格式: { type: 'doc', id: 'xxx' }
+            for match in re.finditer(r"id:\s*'([^']+)'", content):
+                doc_ids.append(match.group(1).strip())
+            
+            # 2) 兼容字符串格式: 'folder/doc-id',
+            for match in re.finditer(r"^\s*'([^']+)'\s*,?\s*$", content, re.MULTILINE):
+                candidate = match.group(1).strip()
+                # 过滤明显不是文档ID的字符串（例如纯年份标签）
+                if candidate and "/" in candidate:
+                    doc_ids.append(candidate)
+            
+            # 去重并保持顺序
+            unique_doc_ids = []
+            seen = set()
+            for item in doc_ids:
+                if item not in seen:
+                    seen.add(item)
+                    unique_doc_ids.append(item)
+            
+            if not unique_doc_ids:
+                self.log("⚠️ 未从sidebars.js中提取到文档ID", "warning")
+                return
+            
+            docs_home = "https://docs.toothmen.com/docs"
+            urls = []
+            for doc_id in unique_doc_ids:
+                encoded_id = "/".join(quote(seg, safe="-_.~") for seg in doc_id.split("/"))
+                urls.append(f"{docs_home}/{encoded_id}")
+            
+            self.log(f"✅ 已生成 {len(urls)} 条有效文档链接", "success")
+            self.log(f"🌐 文档首页: {docs_home}", "info")
+            for i, url in enumerate(urls, start=1):
+                self.log(f"  {i}. {url}", "info")
+            
+            # 复制到剪贴板，便于直接发给同事或验证
+            clip_text = "文档首页:\n" + docs_home + "\n\n有效文档链接:\n" + "\n".join(urls)
+            self.root.clipboard_clear()
+            self.root.clipboard_append(clip_text)
+            self.log("📋 有效链接已复制到剪贴板", "success")
+            
+        except Exception as e:
+            self.log(f"❌ 生成有效链接失败: {str(e)}", "error")
+    
     # ========== 调试工具方法 ==========
     
     def test_network_connection(self):
@@ -2083,6 +2154,8 @@ module.exports = config;"""
         """设置按钮状态（简化版，只支持normal和disabled）
         state: "normal", "disabled"
         """
+        if button is None:
+            return
         if state == "normal":
             button.config(state=tk.NORMAL)
         elif state == "disabled":
@@ -2103,6 +2176,8 @@ module.exports = config;"""
         self.set_button_state(self.start_workflow_btn, "normal")
         self.set_button_state(self.deploy_end_btn, "disabled")
         self.set_button_state(self.verify_deploy_btn, "normal")
+        self.set_button_state(self.valid_links_btn, "normal")
+        self.set_button_state(self.btn_refresh_structure, "normal")
         
         # 重置部署步骤按钮
         if hasattr(self, 'step_buttons') and self.step_buttons:
@@ -2288,6 +2363,7 @@ module.exports = config;"""
     
     def save_sort_config(self):
         """保存排序配置"""
+        success = False
         try:
             # 读取现有的排序配置
             sort_config_path = Path(__file__).parent / "sort_config.json"
@@ -2359,9 +2435,11 @@ module.exports = config;"""
             # 显示保存的文件顺序
             for folder, files in sort_config["files"].items():
                 self.log(f"   📂 {folder}: {files}", "info")
+            success = True
                 
         except Exception as e:
             self.log(f"❌ 保存排序配置失败: {str(e)}", "error")
+        return success
 
 def main():
     """主函数"""

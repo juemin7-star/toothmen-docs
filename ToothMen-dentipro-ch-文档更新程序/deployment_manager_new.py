@@ -188,11 +188,9 @@ class DeploymentManager:
         
         print(f"✅ 检测到文件夹: {detected_folders}")
         
-        # 更新排序配置文件
-        self.update_sort_config(detected_folders)
-        
-        # 更新导航栏配置
-        self.update_navbar_config(detected_folders)
+        # 严格模式：不再自动改写排序配置/导航配置
+        # 排序唯一来源：界面“上下移动 + 保存排序”写入的 sort_config.json
+        print("ℹ️  严格排序模式：跳过自动写入sort_config与导航配置")
         
         # 更新侧边栏配置
         success, message = self.update_sidebars()
@@ -237,9 +235,13 @@ class DeploymentManager:
             else:
                 print(f"⚠️  {message}")
         
-        # 步骤2: 自动检测文件夹结构
-        print("📋 步骤2: 自动检测文件夹结构")
-        self.auto_detect_folders(clean_cache_before=False, clean_cache_after=False)
+        # 步骤2: 严格使用现有排序配置（不再自动检测/覆盖顺序）
+        print("📋 步骤2: 使用已保存排序配置（仅上下移动+保存排序生效）")
+        sort_config_path = Path(__file__).parent / "sort_config.json"
+        if not sort_config_path.exists():
+            error_msg = "未找到sort_config.json，请先在界面中完成排序并点击“保存排序”"
+            print(f"❌ {error_msg}")
+            return False, error_msg
         
         # 步骤3: 执行npm构建
         print("📋 步骤3: 执行npm构建")
@@ -959,19 +961,25 @@ class DeploymentManager:
                     config_files = sort_config.get("files", {}).get(folder_name, [])
                     print(f"  配置文件中的文件顺序: {config_files}")
                     
-                    # 先添加配置文件中指定的文件
+                    # 先添加配置文件中指定的子项（兼容子文件夹与 .md/.mdx 文件）
                     for config_file in config_files:
-                        # 根据文件夹类型确定扩展名
-                        if folder_name == "changelog":
-                            # changelog文件夹使用 .md 扩展名
-                            config_file_with_ext = f"{config_file}.md"
-                        else:
-                            # 其他文件夹使用 .mdx 扩展名
-                            config_file_with_ext = f"{config_file}.mdx"
+                        # 1) 优先按“原样名称”匹配（用于子文件夹，如 2026 / 2025）
+                        if config_file in files_and_folders:
+                            sorted_items.append(config_file)
+                            print(f"    添加配置文件指定的子项: {config_file}")
+                            continue
                         
-                        if config_file_with_ext in files_and_folders:
-                            sorted_items.append(config_file_with_ext)
-                            print(f"    添加配置文件指定的文件: {config_file_with_ext}")
+                        # 2) 再按文件扩展名尝试匹配（兼容 .mdx / .md）
+                        candidate_files = [f"{config_file}.mdx", f"{config_file}.md"]
+                        matched = False
+                        for candidate in candidate_files:
+                            if candidate in files_and_folders:
+                                sorted_items.append(candidate)
+                                print(f"    添加配置文件指定的文件: {candidate}")
+                                matched = True
+                                break
+                        if matched:
+                            continue
                 except Exception as e:
                     print(f"  读取文件配置失败: {e}")
             
