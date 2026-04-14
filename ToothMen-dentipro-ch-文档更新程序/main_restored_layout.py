@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-ToothMen文档管理工具 v3.17 - 恢复原始布局版
+ToothMen文档管理工具 v3.18 - 恢复原始布局版
 功能：文件夹分类管理 + 自动化部署工作流 + 完整构建流程
 按照数字前缀文件夹结构自动生成分类侧边栏
 包含缓存清理功能
@@ -29,7 +29,7 @@ from mdx_checker import MDXChecker
 class ToothMenDocsManager:
     def __init__(self, root):
         self.root = root
-        self.root.title("ToothMen-DentiPro-中文版·文档管理系统 v3.17 - 恢复原始布局")
+        self.root.title("ToothMen-DentiPro-中文版·文档管理系统 v3.18 - 恢复原始布局")
         self.root.geometry("1400x1000")
         
         # 立即显示窗口，避免闪烁
@@ -472,7 +472,7 @@ module.exports = config;"""
         main_frame.rowconfigure(3, weight=1)  # 日志和调试工具区域
         
         # 创建顶部标题
-        title_label = ttk.Label(main_frame, text="ToothMen-DentiPro-中文版·文档管理系统 v3.17 - 恢复原始布局", 
+        title_label = ttk.Label(main_frame, text="ToothMen-DentiPro-中文版·文档管理系统 v3.18 - 恢复原始布局", 
                                font=("Arial", 16, "bold"))
         title_label.grid(row=0, column=0, columnspan=2, pady=(0, 10))
         
@@ -1234,15 +1234,14 @@ module.exports = config;"""
                     self.log("ℹ️  可能是Git配置问题或网络限制", "info")
                     # 继续尝试，但记录警告
                 
-                # 推送策略：HTTPS优先，SSH仅兜底
+                # 推送策略：仅使用HTTPS（失败不再自动切换SSH）
                 push_success = False
                 push_output = ""
                 push_error = ""
                 https_url = "https://github.com/juemin7-star/toothmen-docs.git"
-                ssh_url = "git@github.com:juemin7-star/toothmen-docs.git"
                 
                 # 先确保远程使用HTTPS（更适配当前网络环境）
-                self.log("🌐 推送策略：HTTPS优先，SSH兜底", "info")
+                self.log("🌐 推送策略：仅HTTPS（失败不再自动切SSH）", "info")
                 success_set_https, output_set_https = self.deployment_manager.run_command(
                     self.deployment_manager.git_path, ["remote", "set-url", "origin", https_url]
                 )
@@ -1281,55 +1280,19 @@ module.exports = config;"""
                             break
                         push_error = output_main
                 
-                # 阶段B：HTTPS失败则尝试SSH兜底（最多1次）
                 if not push_success:
-                    self.log("⚠️  HTTPS推送失败，尝试SSH兜底...", "warning")
-                    success_set_ssh, output_set_ssh = self.deployment_manager.run_command(
-                        self.deployment_manager.git_path, ["remote", "set-url", "origin", ssh_url]
-                    )
-                    if success_set_ssh:
-                        self.log("✅ 已切换远程为SSH", "success")
-                    else:
-                        self.log(f"⚠️  切换SSH失败: {output_set_ssh}", "warning")
-                    
-                    success_master_ssh, output_master_ssh = self.deployment_manager.run_command(
-                        self.deployment_manager.git_path, ["push", "origin", "master"]
-                    )
-                    if success_master_ssh:
-                        self.log("✅ 已通过SSH推送到远程仓库 (master分支)", "success")
-                        push_success = True
-                        push_output = output_master_ssh
-                    else:
-                        push_error = output_master_ssh
-                        error_lower = output_master_ssh.lower()
-                        if "src refspec master does not match any" in error_lower or "remote ref does not exist" in error_lower:
-                            self.log("⚠️  master分支推送失败，尝试main分支（SSH）...", "warning")
-                            success_main_ssh, output_main_ssh = self.deployment_manager.run_command(
-                                self.deployment_manager.git_path, ["push", "origin", "main"]
-                            )
-                            if success_main_ssh:
-                                self.log("✅ 已通过SSH推送到远程仓库 (main分支)", "success")
-                                push_success = True
-                                push_output = output_main_ssh
-                            else:
-                                push_error = output_main_ssh
-                
-                if not push_success:
-                    self.log("❌ 推送失败（HTTPS与SSH均未成功）", "error")
+                    self.log("❌ 推送失败（HTTPS未成功）", "error")
                     self.log("ℹ️  可能的原因：", "info")
-                    self.log("  1. 网络连接问题（443/22端口受限）", "info")
-                    self.log("  2. GitHub认证问题", "info")
+                    self.log("  1. 网络连接问题（443端口受限或超时）", "info")
+                    self.log("  2. GitHub认证问题（需使用PAT）", "info")
                     self.log("  3. 仓库权限问题", "info")
                     self.log("  4. 防火墙或代理设置问题", "info")
                     self.log("ℹ️  请手动执行以下命令测试：", "info")
                     self.log(f'  cd "{self.project_path}"', "info")
                     self.log('  git remote set-url origin https://github.com/juemin7-star/toothmen-docs.git', "info")
                     self.log('  git push origin master', "info")
-                    self.log("ℹ️  若HTTPS不通，再尝试SSH：", "info")
-                    self.log("  1. 使用SSH方式: git remote set-url origin git@github.com:juemin7-star/toothmen-docs.git", "info")
-                    self.log("  2. 检查网络代理设置", "info")
-                    self.log("  3. 暂时关闭防火墙测试", "info")
-                    self.log("  4. 使用VPN或更换网络环境", "info")
+                    self.log("ℹ️  认证建议：GitHub 登录请使用 PAT（个人访问令牌）而非账号密码", "info")
+                    self.log("ℹ️  网络建议：检查代理/防火墙或更换网络后重试 HTTPS 推送", "info")
                     if push_error:
                         self.log(f"🔍 最后一次推送错误: {push_error[:300]}", "warning")
                     
@@ -1342,7 +1305,7 @@ module.exports = config;"""
                         manual_content = f"""# 📋 手动推送说明
 
 ## 🔧 问题描述
-自动推送失败，可能是网络连接问题（443端口被阻止）。
+自动推送失败，当前策略仅使用HTTPS，可能是网络或认证问题。
 
 ## 📊 当前状态
 - 所有更改已添加到暂存区
@@ -1359,20 +1322,14 @@ module.exports = config;"""
    git push origin master
    ```
 
-### 方法2: 切换到SSH方式（如果HTTPS被阻止）
-1. 执行以下命令切换到SSH:
-   ```
-   git remote set-url origin git@github.com:juemin7-star/toothmen-docs.git
-   ```
-2. 然后推送:
-   ```
-   git push origin master
-   ```
-
-### 方法3: 使用GitHub Desktop
+### 方法2: 使用GitHub Desktop
 1. 打开GitHub Desktop
 2. 选择此仓库: {self.project_path}
 3. 点击"Push origin"按钮
+
+### 认证说明（重要）
+- 推送到GitHub时，请使用 **PAT（个人访问令牌）** 作为密码
+- 不要使用GitHub账户登录密码
 
 ## 🔍 网络诊断
 如果仍然失败，请检查:
