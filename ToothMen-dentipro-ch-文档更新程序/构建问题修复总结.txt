@@ -50,7 +50,11 @@ const config = {
      organizationName: 'toothmen',
      projectName: 'toothmen-docs',
      onBrokenLinks: 'warn',  // 改为警告而不是抛出错误
-     onBrokenMarkdownLinks: 'warn',
+     markdown: {
+       hooks: {
+         onBrokenMarkdownLinks: 'warn',
+       },
+     },
      i18n: {
        defaultLocale: 'zh-Hans',
        locales: ['zh-Hans'],

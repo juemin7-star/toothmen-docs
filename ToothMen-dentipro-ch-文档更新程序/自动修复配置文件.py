@@ -197,7 +197,12 @@ const config = {{
   projectName: 'toothmen-docs', // 通常是你的仓库名
 
   onBrokenLinks: 'warn',
-  onBrokenMarkdownLinks: 'warn',
+
+  markdown: {{
+    hooks: {{
+      onBrokenMarkdownLinks: 'warn',
+    }},
+  }},
 
   // 即使你使用国际化的英文网站，也可以保留这个配置
   i18n: {{

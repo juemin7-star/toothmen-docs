@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-ToothMen文档管理工具 v3.20
+ToothMen文档管理工具 v3.22
 功能：文件夹分类管理 + 自动化部署工作流 + 完整构建流程
 按照数字前缀文件夹结构自动生成分类侧边栏
 包含缓存清理功能
@@ -29,7 +29,7 @@ from mdx_checker import MDXChecker
 class ToothMenDocsManager:
     def __init__(self, root):
         self.root = root
-        self.root.title("ToothMen-DentiPro-中文版·文档管理系统 v3.20")
+        self.root.title("ToothMen-DentiPro-中文版·文档管理系统 v3.22")
         self.root.geometry("1400x1000")
         
         # 立即显示窗口，避免闪烁
@@ -284,7 +284,12 @@ const config = {{
   projectName: 'toothmen-docs', // 通常是你的仓库名
 
   onBrokenLinks: 'warn',
-  onBrokenMarkdownLinks: 'warn',
+
+  markdown: {{
+    hooks: {{
+      onBrokenMarkdownLinks: 'warn',
+    }},
+  }},
 
   // 即使你使用国际化的英文网站，也可以保留这个配置
   i18n: {{
@@ -474,7 +479,7 @@ module.exports = config;"""
         main_frame.rowconfigure(3, weight=1)  # 日志和调试工具区域
         
         # 创建顶部标题
-        title_label = ttk.Label(main_frame, text="ToothMen-DentiPro-中文版·文档管理系统 v3.20", 
+        title_label = ttk.Label(main_frame, text="ToothMen-DentiPro-中文版·文档管理系统 v3.22", 
                                font=("Arial", 16, "bold"))
         title_label.grid(row=0, column=0, columnspan=2, pady=(0, 10))
         

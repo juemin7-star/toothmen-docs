@@ -103,7 +103,11 @@ const config = {
   organizationName: 'toothmen',
   projectName: 'toothmen-docs',
   onBrokenLinks: 'warn',
-  onBrokenMarkdownLinks: 'warn',
+  markdown: {
+    hooks: {
+      onBrokenMarkdownLinks: 'warn',
+    },
+  },
   i18n: {
     defaultLocale: 'zh-Hans',
     locales: ['zh-Hans'],

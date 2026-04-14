@@ -30,7 +30,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name='ToothMenDocsManager_v3.21',
+    name='ToothMenDocsManager_v3.22',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -53,5 +53,5 @@ coll = COLLECT(
     strip=False,
     upx=True,
     upx_exclude=[],
-    name='ToothMenDocsManager_v3.21',
+    name='ToothMenDocsManager_v3.22',
 )

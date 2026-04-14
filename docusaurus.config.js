@@ -17,7 +17,12 @@ const config = {
   projectName: 'toothmen-docs', // 通常是你的仓库名
 
   onBrokenLinks: 'warn',
-  onBrokenMarkdownLinks: 'warn',
+
+  markdown: {
+    hooks: {
+      onBrokenMarkdownLinks: 'warn',
+    },
+  },
 
   // 即使你使用国际化的英文网站，也可以保留这个配置
   i18n: {
@@ -73,22 +78,19 @@ const config = {
       },
       footer: {
         style: 'dark',
-        links: [
-          {
-            title: '文档',
-            items: [
-              {
-                label: '文档首页',
-                to: '/docs',
-              },
-            ],
-          },
-        ],
+        logo: {
+          alt: 'ToothMen Logo',
+          src: 'img/toothmenlogo.png',
+          width: 48,
+          height: 48,
+        },
+        links: [],
         copyright: `Copyright © ${new Date().getFullYear()} ToothMen. Built with Docusaurus.`,
       },
     }),
 
   plugins: [
+    // /docs 入口由 docs/index.mdx 内 Redirect 处理，避免与 client-redirects 插件争用 index.html
     // 本地搜索插件
     [
       require.resolve("@easyops-cn/docusaurus-search-local"),

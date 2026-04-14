@@ -2,6 +2,14 @@ const sidebars = {
   tutorialSidebar: [
     {
       type: 'category',
+      label: 'Denti-Pro安装总教程',
+      items: [
+        'Denti-Pro安装总教程/main-program-installation-guide',
+      ],
+      collapsed: true,
+    },
+    {
+      type: 'category',
       label: 'Denti-Pro更新日志',
       items: [
       {
@@ -31,14 +39,6 @@ const sidebars = {
       items: [
         'Denti-Pro云更新服务说明/cloud-update-service-registration-guide',
         'Denti-Pro云更新服务说明/special-registration-rules',
-      ],
-      collapsed: true,
-    },
-    {
-      type: 'category',
-      label: 'Denti-Pro安装总教程',
-      items: [
-        'Denti-Pro安装总教程/main-program-installation-guide',
       ],
       collapsed: true,
     },
