@@ -1010,33 +1010,54 @@ module.exports = config;"""
                 # 步骤4: 推送到远程仓库（带重试机制）
                 self.log("📋 步骤4: 推送到远程仓库", "info")
                 
-                # 先检查网络连接（同时检查SSH和HTTPS）
+                # 先检查网络连接（使用Git命令测试，更准确）
                 self.log("🔍 检查网络连接...", "info")
+                
+                # 方案1: 使用Git命令测试连接（最准确）
+                self.log("1. 使用Git命令测试连接...", "info")
+                success_git_test, output_git_test = self.deployment_manager.run_command(
+                    self.deployment_manager.git_path,
+                    ["ls-remote", "https://github.com/juemin7-star/toothmen-docs.git", "HEAD"],
+                    timeout=15  # 15秒超时
+                )
+                
+                if success_git_test:
+                    self.log("✅ Git连接测试成功", "success")
+                    git_connection_ok = True
+                else:
+                    self.log(f"❌ Git连接测试失败: {output_git_test[:100]}...", "error")
+                    git_connection_ok = False
+                
+                # 方案2: 使用socket测试（备用）
+                self.log("2. 使用socket测试端口连接...", "info")
                 import socket
                 
-                # 检查多个可能的连接
                 connections_to_check = [
                     ("github.com", 443),  # HTTPS
                     ("github.com", 22),   # SSH
-                    ("github.com", 80)    # HTTP
                 ]
                 
-                connection_ok = False
+                socket_connection_ok = False
                 for host, port in connections_to_check:
                     try:
-                        socket.create_connection((host, port), timeout=5)
+                        socket.create_connection((host, port), timeout=10)
                         self.log(f"✅ 可以连接到 {host}:{port}", "success")
-                        connection_ok = True
+                        socket_connection_ok = True
                         break
                     except Exception as e:
                         self.log(f"⚠️  无法连接到 {host}:{port}: {str(e)}", "warning")
                 
-                if not connection_ok:
+                # 综合判断
+                if not git_connection_ok and not socket_connection_ok:
                     self.log("❌ 网络连接失败", "error")
                     self.log("ℹ️  请检查网络连接后重试", "info")
                     return
-                else:
-                    self.log("✅ 网络连接正常", "success")
+                elif git_connection_ok:
+                    self.log("✅ 网络连接正常（Git测试通过）", "success")
+                elif socket_connection_ok:
+                    self.log("⚠️  网络连接可能有问题（Git测试失败，但socket测试通过）", "warning")
+                    self.log("ℹ️  可能是Git配置问题或网络限制", "info")
+                    # 继续尝试，但记录警告
                 
                 # 尝试推送（最多重试3次）
                 max_retries = 3
@@ -1096,23 +1117,39 @@ module.exports = config;"""
                             continue
                         
                         # 2. 网络连接问题（特别是443端口连接失败）
-                        elif "unable to access" in error_lower or "connection" in error_lower or "port 443" in error_lower:
+                        elif "unable to access" in error_lower or "connection" in error_lower or "port 443" in error_lower or "timed out" in error_lower:
                             self.log(f"⚠️  网络连接问题 (尝试 {attempt+1}/{max_retries}): {output_master[:100]}...", "warning")
                             
-                            # 如果是443端口连接失败，尝试切换到SSH方式
-                            if "port 443" in error_lower and attempt == 0:
-                                self.log("🔑 检测到443端口连接失败，尝试切换到SSH方式...", "info")
-                                success_ssh, output_ssh = self.deployment_manager.run_command(
-                                    self.deployment_manager.git_path,
-                                    ["remote", "set-url", "origin", "git@github.com:juemin7-star/toothmen-docs.git"]
-                                )
+                            # 分析具体错误
+                            if "port 443" in error_lower:
+                                self.log("🔍 错误分析: 443端口连接失败", "info")
+                                self.log("ℹ️  可能原因: 防火墙阻止、网络代理、SSL证书问题", "info")
                                 
-                                if success_ssh:
-                                    self.log("✅ 已切换到SSH方式", "success")
-                                    # 重新尝试推送
-                                    continue
-                                else:
-                                    self.log(f"❌ 切换到SSH失败: {output_ssh}", "error")
+                                # 如果是第一次尝试，尝试切换到SSH方式
+                                if attempt == 0:
+                                    self.log("🔑 尝试切换到SSH方式...", "info")
+                                    success_ssh, output_ssh = self.deployment_manager.run_command(
+                                        self.deployment_manager.git_path,
+                                        ["remote", "set-url", "origin", "git@github.com:juemin7-star/toothmen-docs.git"]
+                                    )
+                                    
+                                    if success_ssh:
+                                        self.log("✅ 已切换到SSH方式", "success")
+                                        # 重新尝试推送
+                                        continue
+                                    else:
+                                        self.log(f"❌ 切换到SSH失败: {output_ssh}", "error")
+                            
+                            elif "timed out" in error_lower:
+                                self.log("🔍 错误分析: 连接超时", "info")
+                                self.log("ℹ️  可能原因: 网络不稳定、服务器响应慢、网络限制", "info")
+                                self.log("ℹ️  建议: 等待后重试或检查网络连接", "info")
+                            
+                            # 等待后重试
+                            import time
+                            wait_time = (attempt + 1) * 3  # 递增等待时间
+                            self.log(f"⏳ 等待 {wait_time} 秒后重试...", "info")
+                            time.sleep(wait_time)
                             
                             continue
                         
