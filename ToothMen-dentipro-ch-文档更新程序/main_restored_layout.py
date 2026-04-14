@@ -998,8 +998,14 @@ module.exports = config;"""
                 if success3:
                     self.log(f"✅ 已提交更改: {commit_message}", "success")
                 else:
-                    self.log(f"❌ 提交更改失败: {output3}", "error")
-                    return
+                    # 检查是否是"没有更改可提交"的情况
+                    error_lower = output3.lower()
+                    if "nothing to commit" in error_lower or "working tree clean" in error_lower:
+                        self.log("ℹ️  没有需要提交的更改，继续执行推送", "info")
+                        # 继续执行，不返回
+                    else:
+                        self.log(f"❌ 提交更改失败: {output3}", "error")
+                        return
                 
                 # 步骤4: 推送到远程仓库（带重试机制）
                 self.log("📋 步骤4: 推送到远程仓库", "info")
@@ -1122,25 +1128,40 @@ module.exports = config;"""
         thread.start()
     
     def verify_deployment(self):
-        """验证部署"""
+        """验证部署 - 直接打开Cloudflare网站"""
         self.log("🔍 开始验证部署...", "info")
         
         def _verify_deployment():
             try:
-                # 1. 检查网站是否可访问
-                self.log("1. 检查网站是否可访问...", "info")
+                import webbrowser
                 import urllib.request
                 import urllib.error
                 import ssl
                 
+                # Cloudflare网站地址
+                cloudflare_url = "https://docs.toothmen.com"
+                
+                # 1. 先尝试打开网站
+                self.log(f"1. 正在打开Cloudflare网站: {cloudflare_url}", "info")
+                try:
+                    webbrowser.open(cloudflare_url)
+                    self.log("✅ 已打开浏览器访问网站", "success")
+                except Exception as e:
+                    self.log(f"⚠️  无法自动打开浏览器: {str(e)}", "warning")
+                    self.log(f"ℹ️  请手动访问: {cloudflare_url}", "info")
+                
+                # 2. 检查网站是否可访问
+                self.log("\n2. 检查网站是否可访问...", "info")
+                
                 # 创建不验证SSL的上下文（仅用于测试）
                 context = ssl._create_unverified_context()
                 
-                # 尝试多个可能的URL
+                # 尝试多个可能的URL（Cloudflare相关）
                 possible_urls = [
-                    "https://juemin7-star.github.io/toothmen-docs/",
-                    "https://juemin7-star.github.io/toothmen-docs",
-                    "https://juemin7-star.github.io/toothmen-docs/index.html"
+                    "https://docs.toothmen.com/",
+                    "https://docs.toothmen.com",
+                    "https://docs.toothmen.com/docs/NEW-26040801-补丁",
+                    "https://docs.toothmen.com/docs/NEW-260400901-补丁"
                 ]
                 
                 site_accessible = False
@@ -1157,7 +1178,7 @@ module.exports = config;"""
                         break
                     except urllib.error.HTTPError as e:
                         if e.code == 404:
-                            # 404是正常的，GitHub Pages可能还在部署中
+                            # 404是正常的，Cloudflare可能还在部署中
                             self.log(f"⚠️  网站返回404: {url}", "warning")
                             continue
                         else:
@@ -1172,23 +1193,21 @@ module.exports = config;"""
                 else:
                     self.log("❌ 网站无法访问", "error")
                     self.log("ℹ️  可能原因:", "info")
-                    self.log("  1. GitHub Pages部署中（通常需要5-30分钟）", "info")
-                    self.log("  2. 检查GitHub仓库设置是否正确", "info")
-                    self.log("  3. 检查GitHub Pages是否已启用", "info")
+                    self.log("  1. Cloudflare部署中（通常需要5-30分钟）", "info")
+                    self.log("  2. 检查Cloudflare Pages设置", "info")
+                    self.log("  3. 检查DNS配置是否正确", "info")
                     self.log("  4. 等待几分钟后重试验证", "info")
                 
-                # 2. 检查GitHub Pages状态
-                self.log("\n2. 检查GitHub Pages状态...", "info")
-                self.log("ℹ️  GitHub Pages设置页面需要认证才能访问", "info")
-                self.log("ℹ️  请手动检查GitHub仓库设置:", "info")
-                self.log("  1. 访问: https://github.com/juemin7-star/toothmen-docs/settings/pages", "info")
-                self.log("  2. 确保GitHub Pages已启用", "info")
-                self.log("  3. 选择部署分支（通常是gh-pages或main）", "info")
-                self.log("  4. 选择部署文件夹（通常是/root或/docs）", "info")
-                self.log("ℹ️  部署状态可以在Actions标签页查看", "info")
+                # 3. 检查Cloudflare Pages状态
+                self.log("\n3. 检查Cloudflare Pages状态...", "info")
+                self.log("ℹ️  Cloudflare Pages管理页面:", "info")
+                self.log("  1. 访问: https://dash.cloudflare.com/", "info")
+                self.log("  2. 选择toothmen-docs项目", "info")
+                self.log("  3. 查看构建日志和部署状态", "info")
+                self.log("ℹ️  部署状态可以在Cloudflare仪表板查看", "info")
                 
-                # 3. 检查最新提交
-                self.log("\n3. 检查最新提交...", "info")
+                # 4. 检查最新提交
+                self.log("\n4. 检查最新提交...", "info")
                 success, output = self.deployment_manager.run_command(
                     self.deployment_manager.git_path,
                     ["log", "--oneline", "-1"]
@@ -1199,8 +1218,8 @@ module.exports = config;"""
                 else:
                     self.log(f"❌ 无法获取最新提交: {output}", "error")
                 
-                # 4. 检查部署状态
-                self.log("\n4. 检查部署状态...", "info")
+                # 5. 检查部署状态
+                self.log("\n5. 检查部署状态...", "info")
                 success, output = self.deployment_manager.run_command(
                     self.deployment_manager.git_path,
                     ["status"]
@@ -1216,6 +1235,8 @@ module.exports = config;"""
                     self.log(f"❌ 无法检查部署状态: {output}", "error")
                 
                 self.log("\n✅ 部署验证完成", "success")
+                self.log(f"🌐 网站地址: {cloudflare_url}", "info")
+                self.log("📱 请手动访问网站确认更新效果", "info")
                 
             except Exception as e:
                 self.log(f"❌ 部署验证失败: {str(e)}", "error")
