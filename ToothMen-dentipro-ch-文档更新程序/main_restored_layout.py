@@ -2346,4 +2346,31 @@ module.exports = config;"""
                                 if item_name.endswith('.mdx'):
                                     item_name = item_name[:-4]
                                 elif item_name.endswith('.md'):
-                            
+                                    item_name = item_name[:-3]
+                                file_names.append(item_name)
+                    
+                    if file_names:
+                        sort_config["files"][folder_name] = file_names
+            
+            # 保存到文件
+            with open(sort_config_path, 'w', encoding='utf-8') as f:
+                json.dump(sort_config, f, indent=2, ensure_ascii=False)
+            
+            self.log("✅ 排序配置已保存", "success")
+            self.log(f"📁 文件夹顺序: {sort_config['folders']}", "info")
+            
+            # 显示保存的文件顺序
+            for folder, files in sort_config["files"].items():
+                self.log(f"   📂 {folder}: {files}", "info")
+                
+        except Exception as e:
+            self.log(f"❌ 保存排序配置失败: {str(e)}", "error")
+
+def main():
+    """主函数"""
+    root = tk.Tk()
+    app = ToothMenDocsManager(root)
+    root.mainloop()
+
+if __name__ == "__main__":
+    main()
