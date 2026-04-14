@@ -950,6 +950,19 @@ module.exports = config;"""
             self.log("=" * 60, "info")
             
             try:
+                # 步骤0: 检查并清理Git锁文件
+                self.log("📋 步骤0: 检查Git锁文件", "info")
+                lock_file = self.project_path / ".git" / "index.lock"
+                if lock_file.exists():
+                    self.log(f"⚠️  发现Git锁文件: {lock_file}", "warning")
+                    try:
+                        lock_file.unlink()
+                        self.log("✅ 已清理Git锁文件", "success")
+                    except Exception as e:
+                        self.log(f"❌ 无法清理Git锁文件: {str(e)}", "error")
+                        self.log("ℹ️  请手动删除锁文件后重试", "info")
+                        return
+                
                 # 步骤1: 检查Git状态
                 self.log("📋 步骤1: 检查Git状态", "info")
                 success1, output1 = self.deployment_manager.run_command(
@@ -990,18 +1003,28 @@ module.exports = config;"""
                 
                 # 步骤4: 推送到远程仓库
                 self.log("📋 步骤4: 推送到远程仓库", "info")
+                # 先尝试推送到master分支（你的仓库使用master分支）
                 success4, output4 = self.deployment_manager.run_command(
-                    self.deployment_manager.git_path, ["push", "origin", "main"]
+                    self.deployment_manager.git_path, ["push", "origin", "master"]
                 )
                 if success4:
-                    self.log("✅ 已推送到远程仓库", "success")
+                    self.log("✅ 已推送到远程仓库 (master分支)", "success")
                 else:
-                    self.log(f"❌ 推送失败: {output4}", "error")
-                    return
+                    # 如果master分支失败，尝试main分支
+                    self.log("⚠️  master分支推送失败，尝试main分支...", "warning")
+                    success5, output5 = self.deployment_manager.run_command(
+                        self.deployment_manager.git_path, ["push", "origin", "main"]
+                    )
+                    if success5:
+                        self.log("✅ 已推送到远程仓库 (main分支)", "success")
+                    else:
+                        self.log(f"❌ 推送失败: {output5}", "error")
+                        return
                 
                 self.log("=" * 60, "info")
                 self.log("🎉 在线部署完成！", "success")
                 self.log("📊 执行结果:", "info")
+                self.log("  ✅ Git锁文件检查完成", "info")
                 self.log("  ✅ Git状态检查完成", "info")
                 self.log("  ✅ 所有更改已添加", "info")
                 self.log("  ✅ 更改已提交", "info")
