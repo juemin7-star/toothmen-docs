@@ -1086,10 +1086,11 @@ module.exports = config;"""
                     self.log(f"✅ {message}", "success")
                     try:
                         import webbrowser
-                        webbrowser.open("http://localhost:3000")
-                        self.log("🌐 已自动打开本地预览页面: http://localhost:3000", "success")
+                        preview_url = getattr(self.deployment_manager, "preview_url", "http://localhost:3000")
+                        webbrowser.open(preview_url)
+                        self.log(f"🌐 已自动打开本地预览页面: {preview_url}", "success")
                     except Exception as e:
-                        self.log(f"⚠️  自动打开浏览器失败，请手动访问 http://localhost:3000 ({str(e)})", "warning")
+                        self.log(f"⚠️  自动打开浏览器失败，请手动访问本地预览地址 ({str(e)})", "warning")
                     # 完成后启用下一个步骤
                     self.root.after(0, self.enable_next_step)
                 else:
