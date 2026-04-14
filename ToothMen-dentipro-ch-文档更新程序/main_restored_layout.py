@@ -1102,23 +1102,57 @@ module.exports = config;"""
                 
                 # 创建不验证SSL的上下文（仅用于测试）
                 context = ssl._create_unverified_context()
-                req = urllib.request.Request("https://juemin7-star.github.io/toothmen-docs/", method="HEAD")
                 
-                try:
-                    response = urllib.request.urlopen(req, timeout=10, context=context)
-                    self.log(f"✅ 网站可访问 (状态码: {response.status})", "success")
-                except urllib.error.URLError as e:
-                    self.log(f"❌ 网站无法访问: {str(e)}", "error")
-                    self.log("ℹ️  可能原因: 部署尚未完成、网络问题、网站被删除", "info")
+                # 尝试多个可能的URL
+                possible_urls = [
+                    "https://juemin7-star.github.io/toothmen-docs/",
+                    "https://juemin7-star.github.io/toothmen-docs",
+                    "https://juemin7-star.github.io/toothmen-docs/index.html"
+                ]
+                
+                site_accessible = False
+                accessible_url = ""
+                status_code = 0
+                
+                for url in possible_urls:
+                    try:
+                        req = urllib.request.Request(url, method="HEAD")
+                        response = urllib.request.urlopen(req, timeout=10, context=context)
+                        site_accessible = True
+                        accessible_url = url
+                        status_code = response.status
+                        break
+                    except urllib.error.HTTPError as e:
+                        if e.code == 404:
+                            # 404是正常的，GitHub Pages可能还在部署中
+                            self.log(f"⚠️  网站返回404: {url}", "warning")
+                            continue
+                        else:
+                            self.log(f"❌ 网站HTTP错误 {e.code}: {url}", "error")
+                            continue
+                    except urllib.error.URLError as e:
+                        # 其他URL错误
+                        continue
+                
+                if site_accessible:
+                    self.log(f"✅ 网站可访问 (状态码: {status_code}): {accessible_url}", "success")
+                else:
+                    self.log("❌ 网站无法访问", "error")
+                    self.log("ℹ️  可能原因:", "info")
+                    self.log("  1. GitHub Pages部署中（通常需要5-30分钟）", "info")
+                    self.log("  2. 检查GitHub仓库设置是否正确", "info")
+                    self.log("  3. 检查GitHub Pages是否已启用", "info")
+                    self.log("  4. 等待几分钟后重试验证", "info")
                 
                 # 2. 检查GitHub Pages状态
                 self.log("\n2. 检查GitHub Pages状态...", "info")
-                try:
-                    req = urllib.request.Request("https://github.com/juemin7-star/toothmen-docs/settings/pages", method="HEAD")
-                    response = urllib.request.urlopen(req, timeout=10, context=context)
-                    self.log("✅ GitHub Pages设置页面可访问", "success")
-                except Exception as e:
-                    self.log(f"⚠️  无法访问GitHub Pages设置: {str(e)}", "warning")
+                self.log("ℹ️  GitHub Pages设置页面需要认证才能访问", "info")
+                self.log("ℹ️  请手动检查GitHub仓库设置:", "info")
+                self.log("  1. 访问: https://github.com/juemin7-star/toothmen-docs/settings/pages", "info")
+                self.log("  2. 确保GitHub Pages已启用", "info")
+                self.log("  3. 选择部署分支（通常是gh-pages或main）", "info")
+                self.log("  4. 选择部署文件夹（通常是/root或/docs）", "info")
+                self.log("ℹ️  部署状态可以在Actions标签页查看", "info")
                 
                 # 3. 检查最新提交
                 self.log("\n3. 检查最新提交...", "info")
