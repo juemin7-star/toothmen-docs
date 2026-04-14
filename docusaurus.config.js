@@ -62,7 +62,7 @@ const config = {
           },
           {
             type: 'doc',
-            docId: 'Denti-Pro更新日志/changelog-index',
+            docId: 'Denti-Pro更新日志/2026/2026-04',
             position: 'left',
             label: '更新日志',
           },

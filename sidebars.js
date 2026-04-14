@@ -39,7 +39,6 @@ const sidebars = {
         ],
         collapsed: true,
       },
-        'Denti-Pro更新日志/changelog-index',
       ],
       collapsed: true,
     },
