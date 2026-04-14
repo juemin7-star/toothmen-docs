@@ -49,6 +49,10 @@ class ToothMenDocsManager:
         # 确保docs文件夹存在
         self.docs_folder.mkdir(exist_ok=True)
         
+        # 初始化按钮列表（确保在create_widgets之前初始化）
+        self.step_buttons = []
+        self.deployment_steps = ["刷新文件结构", "生成侧边栏", "本地构建测试", "本地预览", "在线部署"]
+        
         # 显示加载提示
         self.loading_label = ttk.Label(self.root, text="正在初始化程序，请稍候...", 
                                       font=("Arial", 12))
@@ -502,7 +506,7 @@ module.exports = config;"""
         # 保存排序按钮（初始禁用）
         self.btn_save_sort = tk.Button(sort_frame, text="💾 保存排序", 
                                       command=self.save_sort_config, width=14, 
-                                      bg="#4CAF50", fg="white", state=tk.DISABLED)
+                                      state=tk.DISABLED)
         self.btn_save_sort.pack(pady=(20, 0))
         
         # 绑定双击事件
@@ -545,19 +549,11 @@ module.exports = config;"""
         row2_frame = ttk.Frame(control_frame)
         row2_frame.grid(row=1, column=0, sticky=tk.W)
         
-        # 部署步骤按钮（使用默认步骤）
-        if not hasattr(self, 'deployment_steps'):
-            self.deployment_steps = ["刷新文件结构", "生成侧边栏", "本地构建测试", "本地预览", "在线部署"]
-        
-        if not hasattr(self, 'step_buttons'):
-            self.step_buttons = []
-        
-        # 如果step_buttons为空，创建按钮
-        if len(self.step_buttons) == 0:
-            for i, step in enumerate(self.deployment_steps):
-                btn = ttk.Button(row2_frame, text=step, command=lambda s=step: self.execute_step(s), state=tk.DISABLED)
-                btn.grid(row=0, column=i, padx=5)
-                self.step_buttons.append(btn)
+        # 创建部署步骤按钮
+        for i, step in enumerate(self.deployment_steps):
+            btn = ttk.Button(row2_frame, text=step, command=lambda s=step: self.execute_step(s), state=tk.DISABLED)
+            btn.grid(row=0, column=i, padx=5)
+            self.step_buttons.append(btn)
         
     def create_log_and_debug_area(self, parent):
         """创建日志和调试工具区域"""
@@ -622,8 +618,8 @@ module.exports = config;"""
     def clean_cache(self):
         """清理缓存"""
         def _clean_cache():
-            self.log("🧹 开始清理缓存...", "info")
             try:
+                self.log("🧹 开始清理缓存...", "info")
                 success, message = self.deployment_manager.clean_cache(thorough=True)
                 if success:
                     self.log(f"✅ {message}", "success")
@@ -751,14 +747,12 @@ module.exports = config;"""
             
             self.log(f"✅ 文件夹结构已刷新，共检测到 {total_folders} 个文件夹", "success")
             
-            # 启用保存排序按钮
-            self.btn_save_sort.config(state=tk.NORMAL)
-            
-            # 初始禁用所有排序按钮（等待用户选择）
-            self.btn_folder_up.config(state=tk.DISABLED)
-            self.btn_folder_down.config(state=tk.DISABLED)
-            self.btn_file_up.config(state=tk.DISABLED)
-            self.btn_file_down.config(state=tk.DISABLED)
+            # 使用set_button_state方法设置按钮状态
+            self.set_button_state(self.btn_save_sort, "normal")
+            self.set_button_state(self.btn_folder_up, "disabled")
+            self.set_button_state(self.btn_folder_down, "disabled")
+            self.set_button_state(self.btn_file_up, "disabled")
+            self.set_button_state(self.btn_file_down, "disabled")
             
         except Exception as e:
             self.log(f"❌ 刷新文件夹结构失败: {str(e)}", "error")
@@ -803,57 +797,102 @@ module.exports = config;"""
     
     def start_workflow(self):
         """开始流程 - 启用第一个部署步骤按钮（顺序执行模式）"""
-        self.log("🔓 开始流程：启用第一个部署步骤按钮", "info")
-        self.log("📋 请按顺序点击下面的按钮：", "info")
-        self.log("  1. 刷新文件结构", "info")
-        self.log("  2. 生成侧边栏", "info")
-        self.log("  3. 本地构建测试", "info")
-        self.log("  4. 本地预览", "info")
-        self.log("  5. 在线部署", "info")
+        # 设置按钮为执行中状态
+        self.set_button_state(self.start_workflow_btn, "executing")
         
-        # 调试信息：检查step_buttons状态
-        self.log(f"🔍 调试：step_buttons数量 = {len(self.step_buttons) if self.step_buttons else 0}", "debug")
+        def _start_workflow():
+            try:
+                self.log("🔓 开始流程：启用第一个部署步骤按钮", "info")
+                self.log("📋 请按顺序点击下面的按钮：", "info")
+                self.log("  1. 刷新文件结构", "info")
+                self.log("  2. 生成侧边栏", "info")
+                self.log("  3. 本地构建测试", "info")
+                self.log("  4. 本地预览", "info")
+                self.log("  5. 在线部署", "info")
+                
+                # 调试信息：检查step_buttons状态
+                self.log(f"🔍 调试：step_buttons数量 = {len(self.step_buttons) if self.step_buttons else 0}", "debug")
+                
+                # 启用第一个部署步骤按钮（刷新文件结构）
+                if self.step_buttons and len(self.step_buttons) > 0:
+                    self.log(f"🔍 调试：正在启用按钮 '{self.deployment_steps[0]}'", "debug")
+                    self.set_button_state(self.step_buttons[0], "normal")
+                    # 检查按钮状态
+                    btn_state = self.step_buttons[0]["state"]
+                    self.log(f"🔍 调试：按钮状态 = {btn_state}", "debug")
+                else:
+                    self.log("❌ 错误：step_buttons列表为空或无效", "error")
+                    self.set_button_state(self.start_workflow_btn, "error")
+                    # 1秒后恢复为正常状态
+                    self.root.after(1000, lambda: self.set_button_state(self.start_workflow_btn, "normal"))
+                    return
+                
+                # 禁用开始流程按钮，启用结束流程按钮
+                self.set_button_state(self.start_workflow_btn, "disabled")
+                self.set_button_state(self.deploy_end_btn, "normal")
+                
+                self.log("✅ 第一个步骤按钮已启用，请点击'刷新文件结构'开始", "success")
+                self.set_button_state(self.start_workflow_btn, "success")
+                # 1秒后恢复为禁用状态（保持禁用）
+                self.root.after(1000, lambda: self.set_button_state(self.start_workflow_btn, "disabled"))
+                
+            except Exception as e:
+                self.log(f"❌ 开始流程失败: {str(e)}", "error")
+                self.set_button_state(self.start_workflow_btn, "error")
+                # 1秒后恢复为正常状态
+                self.root.after(1000, lambda: self.set_button_state(self.start_workflow_btn, "normal"))
         
-        # 启用第一个部署步骤按钮（刷新文件结构）
-        if self.step_buttons and len(self.step_buttons) > 0:
-            self.log(f"🔍 调试：正在启用按钮 '{self.deployment_steps[0]}'", "debug")
-            self.step_buttons[0].config(state=tk.NORMAL)
-            # 检查按钮状态
-            btn_state = self.step_buttons[0]["state"]
-            self.log(f"🔍 调试：按钮状态 = {btn_state}", "debug")
-        else:
-            self.log("❌ 错误：step_buttons列表为空或无效", "error")
-            return
-        
-        # 禁用开始流程按钮，启用结束流程按钮
-        self.start_workflow_btn.config(state=tk.DISABLED)
-        self.deploy_end_btn.config(state=tk.NORMAL)
-        
-        self.log("✅ 第一个步骤按钮已启用，请点击'刷新文件结构'开始", "success")
+        # 在新线程中执行
+        thread = threading.Thread(target=_start_workflow)
+        thread.daemon = True
+        thread.start()
     
 
     
     def end_deployment(self):
         """结束部署流程"""
-        self.deploy_end_btn.config(state=tk.DISABLED)
-        self.start_workflow_btn.config(state=tk.NORMAL)  # 重新启用开始流程按钮
+        # 设置按钮为执行中状态
+        self.set_button_state(self.deploy_end_btn, "executing")
         
-        # 重置当前步骤索引
-        self.current_step_index = None
+        def _end_deployment():
+            try:
+                self.set_button_state(self.deploy_end_btn, "disabled")
+                self.set_button_state(self.start_workflow_btn, "normal")  # 重新启用开始流程按钮
+                
+                # 重置当前步骤索引
+                self.current_step_index = None
+                
+                # 禁用所有步骤按钮
+                for btn in self.step_buttons:
+                    self.set_button_state(btn, "disabled")
+                
+                self.log("🛑 部署流程已结束，所有按钮已重置", "info")
+                self.set_button_state(self.deploy_end_btn, "success")
+                # 1秒后恢复为禁用状态（保持禁用）
+                self.root.after(1000, lambda: self.set_button_state(self.deploy_end_btn, "disabled"))
+                
+            except Exception as e:
+                self.log(f"❌ 结束流程失败: {str(e)}", "error")
+                self.set_button_state(self.deploy_end_btn, "error")
+                # 1秒后恢复为禁用状态
+                self.root.after(1000, lambda: self.set_button_state(self.deploy_end_btn, "disabled"))
         
-        # 禁用所有步骤按钮
-        for btn in self.step_buttons:
-            btn.config(state=tk.DISABLED)
-        
-        self.log("🛑 部署流程已结束，所有按钮已重置", "info")
+        # 在新线程中执行
+        thread = threading.Thread(target=_end_deployment)
+        thread.daemon = True
+        thread.start()
     
     def execute_step(self, step):
         """执行部署步骤"""
-        self.log(f"▶️  执行步骤: {step}", "info")
-        
         # 记录当前步骤索引
         step_index = self.deployment_steps.index(step)
         self.current_step_index = step_index
+        
+        # 设置当前按钮为执行中状态
+        if step_index < len(self.step_buttons):
+            self.set_button_state(self.step_buttons[step_index], "executing")
+        
+        self.log(f"▶️  执行步骤: {step}", "info")
         
         # 根据步骤执行相应操作
         if step == "刷新文件结构":
@@ -872,13 +911,16 @@ module.exports = config;"""
     def enable_next_step(self):
         """启用下一个步骤按钮"""
         if hasattr(self, 'current_step_index') and self.current_step_index is not None:
-            # 禁用当前按钮
-            self.step_buttons[self.current_step_index].config(state=tk.DISABLED)
+            # 设置当前按钮为成功状态
+            if self.current_step_index < len(self.step_buttons):
+                self.set_button_state(self.step_buttons[self.current_step_index], "success")
+                # 1秒后恢复为禁用状态
+                self.root.after(1000, lambda idx=self.current_step_index: self.set_button_state(self.step_buttons[idx], "disabled"))
             
             # 启用下一个按钮
             next_index = self.current_step_index + 1
             if next_index < len(self.step_buttons):
-                self.step_buttons[next_index].config(state=tk.NORMAL)
+                self.set_button_state(self.step_buttons[next_index], "normal")
                 self.log(f"✅ 步骤完成，已启用下一个按钮: {self.deployment_steps[next_index]}", "success")
             else:
                 self.log("✅ 所有部署步骤已完成", "success")
@@ -888,14 +930,20 @@ module.exports = config;"""
     def generate_sidebar(self):
         """生成侧边栏"""
         def _generate_sidebar():
-            self.log("📋 开始生成侧边栏...", "info")
             try:
+                self.log("📋 开始生成侧边栏...", "info")
                 self.deployment_manager.update_sidebars()
                 self.log("✅ 侧边栏生成完成", "success")
                 # 完成后启用下一个步骤
                 self.root.after(0, self.enable_next_step)
             except Exception as e:
                 self.log(f"❌ 生成侧边栏失败: {str(e)}", "error")
+                # 设置按钮为错误状态
+                if hasattr(self, 'current_step_index') and self.current_step_index is not None:
+                    if self.current_step_index < len(self.step_buttons):
+                        self.set_button_state(self.step_buttons[self.current_step_index], "error")
+                        # 1秒后恢复为禁用状态
+                        self.root.after(1000, lambda idx=self.current_step_index: self.set_button_state(self.step_buttons[idx], "disabled"))
         
         thread = threading.Thread(target=_generate_sidebar)
         thread.daemon = True
@@ -1855,6 +1903,38 @@ module.exports = config;"""
             else:
                 self.log(f"❌ {name} 不存在: {path}", "error")
     
+    # ========== 按钮状态管理方法 ==========
+    
+    def set_button_state(self, button, state):
+        """设置按钮状态（简化版，只支持normal和disabled）
+        state: "normal", "disabled"
+        """
+        if state == "normal":
+            button.config(state=tk.NORMAL)
+        elif state == "disabled":
+            button.config(state=tk.DISABLED)
+    
+    def reset_button_states(self):
+        """重置所有按钮状态为正常"""
+        # 重置排序按钮
+        self.set_button_state(self.btn_folder_up, "disabled")
+        self.set_button_state(self.btn_folder_down, "disabled")
+        self.set_button_state(self.btn_file_up, "disabled")
+        self.set_button_state(self.btn_file_down, "disabled")
+        self.set_button_state(self.btn_save_sort, "disabled")
+        
+        # 重置控制按钮
+        self.set_button_state(self.clean_cache_btn, "normal")
+        self.set_button_state(self.check_mdx_btn, "normal")
+        self.set_button_state(self.start_workflow_btn, "normal")
+        self.set_button_state(self.deploy_end_btn, "disabled")
+        self.set_button_state(self.verify_deploy_btn, "normal")
+        
+        # 重置部署步骤按钮
+        if hasattr(self, 'step_buttons') and self.step_buttons:
+            for btn in self.step_buttons:
+                self.set_button_state(btn, "disabled")
+    
     # ========== 排序按钮方法 ==========
     
     def on_tree_selection(self, event):
@@ -1862,10 +1942,11 @@ module.exports = config;"""
         selection = self.tree.selection()
         if not selection:
             # 没有选择任何项目，禁用所有排序按钮
-            self.btn_folder_up.config(state=tk.DISABLED)
-            self.btn_folder_down.config(state=tk.DISABLED)
-            self.btn_file_up.config(state=tk.DISABLED)
-            self.btn_file_down.config(state=tk.DISABLED)
+            self.set_button_state(self.btn_folder_up, "disabled")
+            self.set_button_state(self.btn_folder_down, "disabled")
+            self.set_button_state(self.btn_file_up, "disabled")
+            self.set_button_state(self.btn_file_down, "disabled")
+            self.set_button_state(self.btn_save_sort, "disabled")
             return
         
         item_id = selection[0]
@@ -1874,130 +1955,145 @@ module.exports = config;"""
         # 根据选择的项目类型启用相应的按钮
         if item_text.startswith("📁"):
             # 选择了文件夹，启用文件夹排序按钮，禁用文件排序按钮
-            self.btn_folder_up.config(state=tk.NORMAL)
-            self.btn_folder_down.config(state=tk.NORMAL)
-            self.btn_file_up.config(state=tk.DISABLED)
-            self.btn_file_down.config(state=tk.DISABLED)
+            self.set_button_state(self.btn_folder_up, "normal")
+            self.set_button_state(self.btn_folder_down, "normal")
+            self.set_button_state(self.btn_file_up, "disabled")
+            self.set_button_state(self.btn_file_down, "disabled")
+            self.set_button_state(self.btn_save_sort, "normal")
         elif item_text.startswith("📄") or item_text.startswith("📝"):
             # 选择了文件，启用文件排序按钮，禁用文件夹排序按钮
-            self.btn_folder_up.config(state=tk.DISABLED)
-            self.btn_folder_down.config(state=tk.DISABLED)
-            self.btn_file_up.config(state=tk.NORMAL)
-            self.btn_file_down.config(state=tk.NORMAL)
+            self.set_button_state(self.btn_folder_up, "disabled")
+            self.set_button_state(self.btn_folder_down, "disabled")
+            self.set_button_state(self.btn_file_up, "normal")
+            self.set_button_state(self.btn_file_down, "normal")
+            self.set_button_state(self.btn_save_sort, "normal")
         else:
             # 其他情况，禁用所有按钮
-            self.btn_folder_up.config(state=tk.DISABLED)
-            self.btn_folder_down.config(state=tk.DISABLED)
-            self.btn_file_up.config(state=tk.DISABLED)
-            self.btn_file_down.config(state=tk.DISABLED)
+            self.set_button_state(self.btn_folder_up, "disabled")
+            self.set_button_state(self.btn_folder_down, "disabled")
+            self.set_button_state(self.btn_file_up, "disabled")
+            self.set_button_state(self.btn_file_down, "disabled")
+            self.set_button_state(self.btn_save_sort, "disabled")
     
     def move_folder_up(self):
         """上移文件夹"""
-        selection = self.tree.selection()
-        if not selection:
-            self.log("⚠️  请先选择一个文件夹", "warning")
-            return
-        
-        item_id = selection[0]
-        item_text = self.tree.item(item_id, "text")
-        
-        if not item_text.startswith("📁"):
-            self.log("⚠️  请选择一个文件夹（📁 开头的项目）", "warning")
-            return
-        
-        # 获取父节点和兄弟节点
-        parent = self.tree.parent(item_id)
-        siblings = list(self.tree.get_children(parent))
-        
-        if item_id in siblings:
-            index = siblings.index(item_id)
-            if index > 0:
-                # 交换位置
-                self.tree.move(item_id, parent, index - 1)
-                self.log(f"✅ 文件夹上移: {item_text}", "success")
-            else:
-                self.log("⚠️  文件夹已在最顶部，无法上移", "warning")
+        try:
+            selection = self.tree.selection()
+            if not selection:
+                self.log("⚠️  请先选择一个文件夹", "warning")
+                return
+            
+            item_id = selection[0]
+            item_text = self.tree.item(item_id, "text")
+            
+            if not item_text.startswith("📁"):
+                self.log("⚠️  请选择一个文件夹（📁 开头的项目）", "warning")
+                return
+            
+            # 获取父节点和兄弟节点
+            parent = self.tree.parent(item_id)
+            siblings = list(self.tree.get_children(parent))
+            
+            if item_id in siblings:
+                index = siblings.index(item_id)
+                if index > 0:
+                    # 交换位置
+                    self.tree.move(item_id, parent, index - 1)
+                    self.log(f"✅ 文件夹上移: {item_text}", "success")
+                else:
+                    self.log("⚠️  文件夹已在最顶部，无法上移", "warning")
+        except Exception as e:
+            self.log(f"❌ 上移文件夹失败: {str(e)}", "error")
     
     def move_folder_down(self):
         """下移文件夹"""
-        selection = self.tree.selection()
-        if not selection:
-            self.log("⚠️  请先选择一个文件夹", "warning")
-            return
-        
-        item_id = selection[0]
-        item_text = self.tree.item(item_id, "text")
-        
-        if not item_text.startswith("📁"):
-            self.log("⚠️  请选择一个文件夹（📁 开头的项目）", "warning")
-            return
-        
-        # 获取父节点和兄弟节点
-        parent = self.tree.parent(item_id)
-        siblings = list(self.tree.get_children(parent))
-        
-        if item_id in siblings:
-            index = siblings.index(item_id)
-            if index < len(siblings) - 1:
-                # 交换位置
-                self.tree.move(item_id, parent, index + 1)
-                self.log(f"✅ 文件夹下移: {item_text}", "success")
-            else:
-                self.log("⚠️  文件夹已在最底部，无法下移", "warning")
+        try:
+            selection = self.tree.selection()
+            if not selection:
+                self.log("⚠️  请先选择一个文件夹", "warning")
+                return
+            
+            item_id = selection[0]
+            item_text = self.tree.item(item_id, "text")
+            
+            if not item_text.startswith("📁"):
+                self.log("⚠️  请选择一个文件夹（📁 开头的项目）", "warning")
+                return
+            
+            # 获取父节点和兄弟节点
+            parent = self.tree.parent(item_id)
+            siblings = list(self.tree.get_children(parent))
+            
+            if item_id in siblings:
+                index = siblings.index(item_id)
+                if index < len(siblings) - 1:
+                    # 交换位置
+                    self.tree.move(item_id, parent, index + 1)
+                    self.log(f"✅ 文件夹下移: {item_text}", "success")
+                else:
+                    self.log("⚠️  文件夹已在最底部，无法下移", "warning")
+        except Exception as e:
+            self.log(f"❌ 下移文件夹失败: {str(e)}", "error")
     
     def move_file_up(self):
         """上移文件"""
-        selection = self.tree.selection()
-        if not selection:
-            self.log("⚠️  请先选择一个文件", "warning")
-            return
-        
-        item_id = selection[0]
-        item_text = self.tree.item(item_id, "text")
-        
-        if not (item_text.startswith("📄") or item_text.startswith("📝")):
-            self.log("⚠️  请选择一个文件（📄 或 📝 开头的项目）", "warning")
-            return
-        
-        # 获取父节点和兄弟节点
-        parent = self.tree.parent(item_id)
-        siblings = list(self.tree.get_children(parent))
-        
-        if item_id in siblings:
-            index = siblings.index(item_id)
-            if index > 0:
-                # 交换位置
-                self.tree.move(item_id, parent, index - 1)
-                self.log(f"✅ 文件上移: {item_text}", "success")
-            else:
-                self.log("⚠️  文件已在最顶部，无法上移", "warning")
+        try:
+            selection = self.tree.selection()
+            if not selection:
+                self.log("⚠️  请先选择一个文件", "warning")
+                return
+            
+            item_id = selection[0]
+            item_text = self.tree.item(item_id, "text")
+            
+            if not (item_text.startswith("📄") or item_text.startswith("📝")):
+                self.log("⚠️  请选择一个文件（📄 或 📝 开头的项目）", "warning")
+                return
+            
+            # 获取父节点和兄弟节点
+            parent = self.tree.parent(item_id)
+            siblings = list(self.tree.get_children(parent))
+            
+            if item_id in siblings:
+                index = siblings.index(item_id)
+                if index > 0:
+                    # 交换位置
+                    self.tree.move(item_id, parent, index - 1)
+                    self.log(f"✅ 文件上移: {item_text}", "success")
+                else:
+                    self.log("⚠️  文件已在最顶部，无法上移", "warning")
+        except Exception as e:
+            self.log(f"❌ 上移文件失败: {str(e)}", "error")
     
     def move_file_down(self):
         """下移文件"""
-        selection = self.tree.selection()
-        if not selection:
-            self.log("⚠️  请先选择一个文件", "warning")
-            return
-        
-        item_id = selection[0]
-        item_text = self.tree.item(item_id, "text")
-        
-        if not (item_text.startswith("📄") or item_text.startswith("📝")):
-            self.log("⚠️  请选择一个文件（📄 或 📝 开头的项目）", "warning")
-            return
-        
-        # 获取父节点和兄弟节点
-        parent = self.tree.parent(item_id)
-        siblings = list(self.tree.get_children(parent))
-        
-        if item_id in siblings:
-            index = siblings.index(item_id)
-            if index < len(siblings) - 1:
-                # 交换位置
-                self.tree.move(item_id, parent, index + 1)
-                self.log(f"✅ 文件下移: {item_text}", "success")
-            else:
-                self.log("⚠️  文件已在最底部，无法下移", "warning")
+        try:
+            selection = self.tree.selection()
+            if not selection:
+                self.log("⚠️  请先选择一个文件", "warning")
+                return
+            
+            item_id = selection[0]
+            item_text = self.tree.item(item_id, "text")
+            
+            if not (item_text.startswith("📄") or item_text.startswith("📝")):
+                self.log("⚠️  请选择一个文件（📄 或 📝 开头的项目）", "warning")
+                return
+            
+            # 获取父节点和兄弟节点
+            parent = self.tree.parent(item_id)
+            siblings = list(self.tree.get_children(parent))
+            
+            if item_id in siblings:
+                index = siblings.index(item_id)
+                if index < len(siblings) - 1:
+                    # 交换位置
+                    self.tree.move(item_id, parent, index + 1)
+                    self.log(f"✅ 文件下移: {item_text}", "success")
+                else:
+                    self.log("⚠️  文件已在最底部，无法下移", "warning")
+        except Exception as e:
+            self.log(f"❌ 下移文件失败: {str(e)}", "error")
     
     def save_sort_config(self):
         """保存排序配置"""
