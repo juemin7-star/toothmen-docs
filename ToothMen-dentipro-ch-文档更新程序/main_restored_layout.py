@@ -1075,9 +1075,25 @@ module.exports = config;"""
                             else:
                                 self.log(f"❌ 切换到HTTPS失败: {output_https}", "error")
                         
-                        # 2. 网络连接问题
-                        elif "unable to access" in error_lower or "connection" in error_lower:
+                        # 2. 网络连接问题（特别是443端口连接失败）
+                        elif "unable to access" in error_lower or "connection" in error_lower or "port 443" in error_lower:
                             self.log(f"⚠️  网络连接问题 (尝试 {attempt+1}/{max_retries}): {output_master[:100]}...", "warning")
+                            
+                            # 如果是443端口连接失败，尝试切换到SSH方式
+                            if "port 443" in error_lower and attempt == 0:
+                                self.log("🔑 检测到443端口连接失败，尝试切换到SSH方式...", "info")
+                                success_ssh, output_ssh = self.deployment_manager.run_command(
+                                    self.deployment_manager.git_path,
+                                    ["remote", "set-url", "origin", "git@github.com:juemin7-star/toothmen-docs.git"]
+                                )
+                                
+                                if success_ssh:
+                                    self.log("✅ 已切换到SSH方式", "success")
+                                    # 重新尝试推送
+                                    continue
+                                else:
+                                    self.log(f"❌ 切换到SSH失败: {output_ssh}", "error")
+                            
                             continue
                         
                         # 3. 其他错误，尝试main分支
