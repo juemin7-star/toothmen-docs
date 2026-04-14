@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-ToothMen文档管理工具 v3.16 - 恢复原始布局版
+ToothMen文档管理工具 v3.17 - 恢复原始布局版
 功能：文件夹分类管理 + 自动化部署工作流 + 完整构建流程
 按照数字前缀文件夹结构自动生成分类侧边栏
 包含缓存清理功能
@@ -29,7 +29,7 @@ from mdx_checker import MDXChecker
 class ToothMenDocsManager:
     def __init__(self, root):
         self.root = root
-        self.root.title("ToothMen-DentiPro-中文版·文档管理系统 v3.16 - 恢复原始布局")
+        self.root.title("ToothMen-DentiPro-中文版·文档管理系统 v3.17 - 恢复原始布局")
         self.root.geometry("1400x1000")
         
         # 立即显示窗口，避免闪烁
@@ -472,7 +472,7 @@ module.exports = config;"""
         main_frame.rowconfigure(3, weight=1)  # 日志和调试工具区域
         
         # 创建顶部标题
-        title_label = ttk.Label(main_frame, text="ToothMen-DentiPro-中文版·文档管理系统 v3.16 - 恢复原始布局", 
+        title_label = ttk.Label(main_frame, text="ToothMen-DentiPro-中文版·文档管理系统 v3.17 - 恢复原始布局", 
                                font=("Arial", 16, "bold"))
         title_label.grid(row=0, column=0, columnspan=2, pady=(0, 10))
         
@@ -1084,6 +1084,12 @@ module.exports = config;"""
                 success, message = self.deployment_manager.local_preview()
                 if success:
                     self.log(f"✅ {message}", "success")
+                    try:
+                        import webbrowser
+                        webbrowser.open("http://localhost:3000")
+                        self.log("🌐 已自动打开本地预览页面: http://localhost:3000", "success")
+                    except Exception as e:
+                        self.log(f"⚠️  自动打开浏览器失败，请手动访问 http://localhost:3000 ({str(e)})", "warning")
                     # 完成后启用下一个步骤
                     self.root.after(0, self.enable_next_step)
                 else:

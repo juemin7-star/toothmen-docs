@@ -1283,55 +1283,97 @@ class DeploymentManager:
     
     def local_preview(self):
         """
-        启动本地预览（只启动，不检查是否成功）
+        启动本地预览（确认端口可用后返回成功）
         
         Returns:
             (success, output)
         """
         try:
-            # 先检查是否已经有服务器在运行
             import socket
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            result = sock.connect_ex(('localhost', 3000))
-            sock.close()
-            
-            if result == 0:
-                return True, "本地服务器已在运行 (端口 3000)"
-            
-            # 启动开发服务器（非阻塞方式）
             import subprocess
             import sys
             
-            # 使用subprocess.Popen在后台启动
-            cmd = f"{self.npm_path} start"
+            def is_port_open(port=3000, timeout=1):
+                # 同时检测 localhost 与 127.0.0.1，避免主机解析差异导致误判
+                for host in ("localhost", "127.0.0.1"):
+                    try:
+                        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                        sock.settimeout(timeout)
+                        result = sock.connect_ex((host, port))
+                        sock.close()
+                        if result == 0:
+                            return True
+                    except Exception:
+                        continue
+                return False
+            
+            # 先检查是否已经有服务器在运行
+            if is_port_open():
+                return True, "本地服务器已在运行 (端口 3000)"
             
             # 在Windows上隐藏控制台窗口
             if sys.platform == "win32":
                 startupinfo = subprocess.STARTUPINFO()
                 startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
                 startupinfo.wShowWindow = subprocess.SW_HIDE
+                creationflags = subprocess.CREATE_NO_WINDOW
             else:
                 startupinfo = None
+                creationflags = 0
             
-            # 启动进程 - 隐藏控制台窗口
-            process = subprocess.Popen(
-                cmd,
-                cwd=str(self.project_path),
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                startupinfo=startupinfo,
-                shell=True,
-                creationflags=subprocess.CREATE_NO_WINDOW  # 隐藏控制台窗口
-            )
+            # 优先使用 serve（更符合“构建后预览”），失败再回退 start
+            launch_commands = [
+                [self.npm_path, "run", "serve", "--", "--port", "3000"],
+                [self.npm_path, "start"],
+            ]
             
-            # 存储进程引用，以便后续检查
-            self.preview_process = process
+            launch_errors = []
             
-            # 等待2秒让进程启动
-            time.sleep(2)
+            for cmd in launch_commands:
+                process = subprocess.Popen(
+                    cmd,
+                    cwd=str(self.project_path),
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    encoding="utf-8",
+                    errors="ignore",
+                    startupinfo=startupinfo,
+                    shell=False,
+                    creationflags=creationflags
+                )
+                
+                self.preview_process = process
+                
+                # 等待最多12秒确认端口已监听
+                for _ in range(12):
+                    time.sleep(1)
+                    if is_port_open():
+                        return True, "本地预览服务器已启动，并已确认端口3000可访问"
+                    
+                    # 进程提前退出，记录错误并尝试下一个命令
+                    if process.poll() is not None:
+                        try:
+                            _, stderr = process.communicate(timeout=2)
+                            err_text = (stderr or "").strip()
+                        except Exception:
+                            err_text = ""
+                        # 端口已占用说明本地预览已在运行，按成功处理
+                        if "already running on port 3000" in err_text.lower():
+                            return True, "检测到端口3000已有预览服务在运行，可直接访问 http://localhost:3000"
+                        launch_errors.append(f"{' '.join(cmd)} -> {err_text[:300]}")
+                        break
+                
+                # 若进程未退出但端口仍未开放，终止后尝试下一个命令
+                if process.poll() is None and not is_port_open():
+                    try:
+                        process.terminate()
+                    except Exception:
+                        pass
+                    launch_errors.append(f"{' '.join(cmd)} -> 启动超时，端口3000未开放")
             
-            # 不检查是否成功，只返回启动信息
-            return True, "本地预览服务器已启动，请手动访问 http://localhost:3000 确认是否成功"
+            details = "；".join(launch_errors) if launch_errors else "未知原因"
+            return False, f"本地预览启动失败，端口3000未监听。详情: {details}"
             
         except Exception as e:
             return False, f"本地预览异常: {str(e)}"
