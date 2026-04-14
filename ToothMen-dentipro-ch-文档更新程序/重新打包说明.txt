@@ -1,0 +1,88 @@
+# 重新打包说明
+
+## 问题分析
+用户报告构建失败，错误信息：
+```
+ParseError: D:\: Invalid left-hand side in prefix operation.
+D:\magicdental开发备忘录\toothmen-官方说明文档系统\ToothMen-Docs-Simple\docusaurus.config.js:1:3
+```
+
+## 问题原因
+经过分析，发现问题的根本原因是：
+1. `docusaurus.config.js` 文件被写入了MDX格式的内容（包含YAML frontmatter）
+2. Docusaurus要求配置文件必须是JavaScript格式
+3. 用户可能手动修改了配置文件，或者程序错误地写入了MDX内容
+
+## 解决方案
+已实施以下修复：
+
+### 1. 自动配置文件修复
+在 `main_restored_layout.py` 中添加了 `check_and_fix_docusaurus_config()` 方法：
+- 程序启动时自动检查 `docusaurus.config.js` 文件格式
+- 如果是MDX格式，自动恢复为正确的JavaScript格式
+- 如果是无效的JavaScript，自动修复
+- 备份原文件，避免数据丢失
+
+### 2. 安全更新导航栏配置
+修改 `deployment_manager_new.py` 中的 `update_navbar_config()` 方法：
+- 添加检查：如果配置文件是MDX格式，跳过更新并提示用户
+- 避免在MDX格式的文件上使用正则表达式，防止破坏文件
+
+### 3. 移除自动检测
+修改 `deployment_manager_new.py` 中的 `load_config()` 方法：
+- 移除自动调用 `auto_detect_folders()` 的功能
+- 自动检测功能现在由用户手动触发，避免意外修改配置文件
+
+## 重新打包的程序
+已使用系统Python重新打包程序：
+- Python版本：3.12.10
+- PyInstaller版本：6.19.0
+- 打包时间：2026-04-14
+
+### 生成的文件
+在 `dist` 文件夹中：
+1. `ToothMenDocsManager_restored.exe` - 单个EXE文件（0.82 MB）
+2. `ToothMenDocsManager_restored` 文件夹 - 文件夹形式的程序
+
+### 程序功能
+重新打包的程序包含以下改进：
+1. **自动配置文件修复**：程序启动时自动检查和修复 `docusaurus.config.js`
+2. **安全更新机制**：避免在MDX格式的文件上执行更新操作
+3. **完整的部署流程**：支持顺序执行部署步骤
+4. **文件夹排序功能**：支持上下移动文件夹和文件
+5. **缓存清理**：支持清理Docusaurus和npm缓存
+
+## 使用说明
+1. 运行 `ToothMenDocsManager_restored.exe` 或打开 `ToothMenDocsManager_restored` 文件夹中的程序
+2. 程序启动时会自动检查并修复 `docusaurus.config.js` 文件
+3. 按照顺序点击部署按钮：
+   - 点击"开始流程"
+   - 点击"刷新文件结构"
+   - 点击"生成侧边栏"
+   - 点击"本地构建测试"
+   - 点击"本地预览"
+   - 点击"自动部署"（可选）
+
+## 验证方法
+1. 启动程序，观察日志中是否有"✅ docusaurus.config.js 配置文件正常"的消息
+2. 如果配置文件有问题，程序会自动修复并显示修复成功的消息
+3. 执行"本地构建测试"，应该不再出现 `ParseError` 错误
+
+## 技术细节
+### 配置文件修复逻辑
+1. 检查文件是否以 `---` 开头（MDX格式）
+2. 如果是MDX格式，创建正确的JavaScript配置
+3. 备份原文件为 `.js.mdx_backup`
+4. 写入修复后的JavaScript配置
+
+### 导航栏配置更新逻辑
+1. 检查文件是否是MDX格式
+2. 如果是MDX格式，跳过更新并提示用户
+3. 如果是JavaScript格式，使用正则表达式更新 `items: [...]` 部分
+4. 只更新导航栏项目，不修改其他配置
+
+## 注意事项
+1. 程序不再自动修改 `docusaurus.config.js`，除非用户手动触发相关功能
+2. 配置文件修复功能只在程序启动时执行一次
+3. 如果用户手动将配置文件改回MDX格式，下次启动程序时会再次修复
+4. 建议不要手动修改 `docusaurus.config.js` 文件，使用程序的功能进行更新

@@ -1,0 +1,27 @@
+{
+  "folder_mapping": {
+    "cloud_service": "Denti-Pro云更新服务说明",
+    "installation": "Denti-Pro安装总教程",
+    "changelog": "Denti-Pro更新日志",
+    "patches": "补丁更新日志"
+  },
+  "doc_id_mapping": {
+    "main_installation": "main-program-installation-guide",
+    "cloud_registration": "cloud-update-service-registration-guide",
+    "special_rules": "special-registration-rules"
+  },
+  "nav_config": {
+    "docs": {
+      "type": "doc",
+      "docId_key": "installation/main_installation",
+      "position": "left",
+      "label": "文档"
+    },
+    "changelog": {
+      "type": "doc",
+      "docId_key": "changelog/2026",
+      "position": "left",
+      "label": "更新日志"
+    }
+  }
+}

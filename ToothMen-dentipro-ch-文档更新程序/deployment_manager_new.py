@@ -27,7 +27,7 @@ class DeploymentManager:
         self.sidebars_path = self.project_path / "sidebars.js"
         
         # 命令路径配置
-        self.npm_path = "npm"
+        self.npm_path = "npm.cmd"  # Windows上使用npm.cmd
         self.git_path = r"C:\Program Files\Git\cmd\git.exe"
         
         # 特殊文件夹配置（需要倒序排序）
@@ -48,6 +48,88 @@ class DeploymentManager:
                     self.reverse_order_folders = config.get("reverse_order_folders", self.reverse_order_folders)
             except:
                 pass
+        
+        # 注意：不再自动检测文件夹结构，避免修改配置文件
+        # 自动检测功能由用户手动触发
+    
+    def clean_cache(self, thorough=False):
+        """
+        清理Docusaurus缓存
+        
+        Args:
+            thorough: 是否彻底清理（包括build文件夹）
+        
+        Returns:
+            (success, message): 清理结果
+        """
+        print("🧹 开始清理缓存...")
+        
+        cache_dirs = [
+            ".docusaurus",      # Docusaurus缓存目录
+            "node_modules/.cache",  # Node.js缓存
+        ]
+        
+        if thorough:
+            cache_dirs.append("build")  # 构建输出目录
+        
+        cleaned_count = 0
+        errors = []
+        
+        for cache_dir in cache_dirs:
+            cache_path = self.project_path / cache_dir
+            if cache_path.exists():
+                try:
+                    if cache_path.is_dir():
+                        shutil.rmtree(cache_path)
+                        print(f"✅ 已清理: {cache_dir}")
+                        cleaned_count += 1
+                    else:
+                        os.remove(cache_path)
+                        print(f"✅ 已删除: {cache_dir}")
+                        cleaned_count += 1
+                except Exception as e:
+                    error_msg = f"清理 {cache_dir} 失败: {e}"
+                    print(f"❌ {error_msg}")
+                    errors.append(error_msg)
+            else:
+                print(f"📭 无需清理: {cache_dir} (不存在)")
+        
+        # 清理npm缓存（可选，如果npm可用）
+        try:
+            print("🧹 清理npm缓存...")
+            # 检查npm是否可用
+            result = subprocess.run(
+                [self.npm_path, "--version"],
+                capture_output=True,
+                text=True,
+                cwd=self.project_path,
+                creationflags=subprocess.CREATE_NO_WINDOW  # 隐藏控制台窗口
+            )
+            if result.returncode == 0:
+                # npm可用，清理缓存
+                cache_result = subprocess.run(
+                    [self.npm_path, "cache", "clean", "--force"],
+                    capture_output=True,
+                    text=True,
+                    cwd=self.project_path,
+                    creationflags=subprocess.CREATE_NO_WINDOW  # 隐藏控制台窗口
+                )
+                if cache_result.returncode == 0:
+                    print("✅ npm缓存已清理")
+                    cleaned_count += 1
+                else:
+                    error_msg = f"npm缓存清理失败: {cache_result.stderr}"
+                    print(f"❌ {error_msg}")
+                    errors.append(error_msg)
+            else:
+                print("📭 npm不可用，跳过npm缓存清理")
+        except Exception as e:
+            print(f"📭 npm缓存清理跳过: {e}")
+        
+        if errors:
+            return False, f"清理完成但有错误: {', '.join(errors)}"
+        else:
+            return True, f"缓存清理完成，清理了 {cleaned_count} 个项目"
     
     def scan_folder_structure(self) -> Dict[str, List[str]]:
         """
@@ -74,6 +156,466 @@ class DeploymentManager:
                 structure[folder_name] = mdx_files
         
         return structure
+    
+    def auto_detect_folders(self, clean_cache_before=True, clean_cache_after=True):
+        """
+        自动检测文件夹结构并更新配置
+        
+        Args:
+            clean_cache_before: 执行前是否清理缓存
+            clean_cache_after: 执行后是否清理缓存
+        """
+        print("🔍 开始自动检测文件夹结构...")
+        
+        # 执行前清理缓存
+        if clean_cache_before:
+            print("🧹 执行前清理缓存...")
+            success, message = self.clean_cache(thorough=True)
+            if success:
+                print(f"✅ {message}")
+            else:
+                print(f"⚠️  {message}")
+        
+        if not self.docs_folder.exists():
+            print("❌ docs文件夹不存在")
+            return
+        
+        # 检测文件夹
+        detected_folders = []
+        for item in self.docs_folder.iterdir():
+            if item.is_dir():
+                detected_folders.append(item.name)
+        
+        print(f"✅ 检测到文件夹: {detected_folders}")
+        
+        # 更新排序配置文件
+        self.update_sort_config(detected_folders)
+        
+        # 更新导航栏配置
+        self.update_navbar_config(detected_folders)
+        
+        # 更新侧边栏配置
+        success, message = self.update_sidebars()
+        if success:
+            print(f"✅ 侧边栏更新: {message}")
+        else:
+            print(f"❌ 侧边栏更新失败: {message}")
+        
+        print("✅ 文件夹结构自动检测完成")
+        
+        # 执行后清理缓存
+        if clean_cache_after:
+            print("🧹 执行后清理缓存...")
+            success, message = self.clean_cache(thorough=False)  # 不清理build文件夹
+            if success:
+                print(f"✅ {message}")
+            else:
+                print(f"⚠️  {message}")
+    
+    def build_website(self, clean_cache_before=True, clean_cache_after=True, serve_after_build=False, port=3000):
+        """
+        构建网站（完整的可重复工作流）
+        
+        Args:
+            clean_cache_before: 构建前是否清理缓存
+            clean_cache_after: 构建后是否清理缓存
+            serve_after_build: 构建后是否启动服务器
+            port: 服务器端口
+        
+        Returns:
+            (success, message): 构建结果
+        """
+        print("🏗️  开始构建网站（完整工作流）...")
+        print("=" * 50)
+        
+        # 步骤1: 构建前清理缓存
+        if clean_cache_before:
+            print("📋 步骤1: 构建前清理缓存")
+            success, message = self.clean_cache(thorough=True)
+            if success:
+                print(f"✅ {message}")
+            else:
+                print(f"⚠️  {message}")
+        
+        # 步骤2: 自动检测文件夹结构
+        print("📋 步骤2: 自动检测文件夹结构")
+        self.auto_detect_folders(clean_cache_before=False, clean_cache_after=False)
+        
+        # 步骤3: 执行npm构建
+        print("📋 步骤3: 执行npm构建")
+        try:
+            result = subprocess.run(
+                [self.npm_path, "run", "build"],
+                capture_output=True,
+                encoding='utf-8',
+                errors='ignore',
+                cwd=self.project_path,
+                timeout=300,  # 5分钟超时
+                shell=True,  # 使用shell执行
+                creationflags=subprocess.CREATE_NO_WINDOW  # 隐藏控制台窗口
+            )
+            
+            if result.returncode == 0:
+                print("✅ 网站构建成功")
+                
+                # 步骤4: 构建后清理缓存
+                if clean_cache_after:
+                    print("📋 步骤4: 构建后清理缓存")
+                    success, message = self.clean_cache(thorough=False)
+                    if success:
+                        print(f"✅ {message}")
+                    else:
+                        print(f"⚠️  {message}")
+                
+                # 步骤5: 启动服务器（如果需要）
+                if serve_after_build:
+                    print(f"📋 步骤5: 启动服务器 (端口: {port})")
+                    try:
+                        # 使用子进程启动服务器（非阻塞）- 隐藏控制台窗口
+                        server_process = subprocess.Popen(
+                            ["npx", "docusaurus", "serve", "--port", str(port)],
+                            cwd=self.project_path,
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE,
+                            text=True,
+                            creationflags=subprocess.CREATE_NO_WINDOW  # 隐藏控制台窗口
+                        )
+                        
+                        # 等待服务器启动
+                        time.sleep(3)
+                        
+                        # 检查服务器是否运行
+                        if server_process.poll() is None:
+                            print(f"✅ 服务器已启动: http://localhost:{port}")
+                            return True, f"构建成功，服务器运行在 http://localhost:{port}"
+                        else:
+                            stdout, stderr = server_process.communicate()
+                            return False, f"服务器启动失败: {stderr}"
+                    except Exception as e:
+                        return False, f"启动服务器失败: {e}"
+                
+                return True, "网站构建成功"
+            else:
+                error_msg = f"构建失败: {result.stderr}"
+                print(f"❌ {error_msg}")
+                return False, error_msg
+                
+        except subprocess.TimeoutExpired:
+            error_msg = "构建超时（超过5分钟）"
+            print(f"❌ {error_msg}")
+            return False, error_msg
+        except Exception as e:
+            error_msg = f"执行构建命令失败: {e}"
+            print(f"❌ {error_msg}")
+            return False, error_msg
+    
+    def update_sort_config(self, folders):
+        """
+        更新排序配置文件
+        
+        Args:
+            folders: 检测到的文件夹列表
+        """
+        sort_config_path = Path(__file__).parent / "sort_config.json"
+        
+        # 读取现有配置
+        config = {}
+        if sort_config_path.exists():
+            try:
+                with open(sort_config_path, 'r', encoding='utf-8') as f:
+                    config = json.load(f)
+            except:
+                config = {}
+        
+        # 更新文件夹列表
+        config["folders"] = folders
+        
+        # 更新文件排序（保持现有的文件顺序）
+        if "files" not in config:
+            config["files"] = {}
+        
+        # 为每个文件夹设置默认文件排序
+        for folder in folders:
+            folder_path = self.docs_folder / folder
+            if folder_path.exists():
+                # 获取文件夹中的文件
+                files = []
+                for file_item in folder_path.iterdir():
+                    if file_item.is_file() and (file_item.name.endswith('.mdx') or file_item.name.endswith('.md')):
+                        files.append(self.clean_name(file_item.name))
+                
+                # 如果有子文件夹（如年份文件夹）
+                subfolders = []
+                for sub_item in folder_path.iterdir():
+                    if sub_item.is_dir():
+                        subfolders.append(sub_item.name)
+                
+                if subfolders:
+                    # 如果有子文件夹，添加到配置
+                    config["files"][folder] = subfolders
+                    
+                    # 为每个子文件夹配置文件排序
+                    for subfolder in subfolders:
+                        subfolder_path = folder_path / subfolder
+                        subfolder_key = f"{folder}/{subfolder}"
+                        
+                        sub_files = []
+                        for file_item in subfolder_path.iterdir():
+                            if file_item.is_file() and (file_item.name.endswith('.mdx') or file_item.name.endswith('.md')):
+                                sub_files.append(self.clean_name(file_item.name))
+                        
+                        if sub_files:
+                            # 按数字前缀排序（倒序）
+                            sub_files_sorted = self.sort_by_number_prefix(sub_files)
+                            config["files"][subfolder_key] = sub_files_sorted
+                elif files:
+                    # 如果没有子文件夹，直接配置文件
+                    config["files"][folder] = files
+        
+        # 写入配置文件
+        try:
+            with open(sort_config_path, 'w', encoding='utf-8') as f:
+                json.dump(config, f, ensure_ascii=False, indent=2)
+            print(f"✅ 已更新排序配置文件: {sort_config_path}")
+        except Exception as e:
+            print(f"❌ 更新排序配置文件失败: {e}")
+    
+    def update_navbar_config(self, folders):
+        """
+        更新导航栏配置
+        
+        Args:
+            folders: 检测到的文件夹列表
+        """
+        docusaurus_config_path = self.project_path / "docusaurus.config.js"
+        
+        if not docusaurus_config_path.exists():
+            print(f"❌ Docusaurus配置文件不存在: {docusaurus_config_path}")
+            return
+        
+        try:
+            # 读取配置文件
+            with open(docusaurus_config_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            
+            # 检查文件是否是MDX格式（包含YAML frontmatter）
+            if content.strip().startswith('---'):
+                print("⚠️  docusaurus.config.js 是MDX格式，无法更新导航栏配置")
+                print("ℹ️  请确保配置文件是JavaScript格式")
+                return
+            
+            # 查找导航栏配置部分
+            import re
+            
+            # 查找 items: [ 开始到 ] 结束的部分
+            pattern = r'items:\s*\[(.*?)\]'
+            match = re.search(pattern, content, re.DOTALL)
+            
+            if not match:
+                print("❌ 未找到导航栏配置")
+                return
+            
+            items_content = match.group(1)
+            
+            # 分析文件夹类型，生成导航项
+            nav_items = []
+            
+            # 检测安装教程文件夹
+            installation_folders = [f for f in folders if "安装" in f or "installation" in f.lower()]
+            if installation_folders:
+                installation_folder = installation_folders[0]
+                # 查找安装教程的主文档
+                main_doc_id = self.find_main_doc_id(installation_folder)
+                if main_doc_id:
+                    nav_items.append(f"""          {{
+            type: 'doc',
+            docId: '{main_doc_id}',
+            position: 'left',
+            label: '总文档中心',
+          }},""")
+            
+            # 检测更新日志文件夹（排除云更新服务说明）
+            changelog_folders = [f for f in folders if ("更新" in f and "云更新" not in f) or "changelog" in f.lower()]
+            if changelog_folders:
+                changelog_folder = changelog_folders[0]
+                # 优先查找总览页面 (changelog-index)
+                changelog_index_path = self.docs_folder / changelog_folder / "index.md"
+                if changelog_index_path.exists():
+                    # 读取index.md文件获取文档ID
+                    try:
+                        with open(changelog_index_path, 'r', encoding='utf-8') as f:
+                            index_content = f.read()
+                            # 查找id字段
+                            import re
+                            id_match = re.search(r'id:\s*["\']?([^"\'\s]+)', index_content)
+                            if id_match:
+                                doc_id = id_match.group(1)
+                                nav_items.append(f"""          {{
+            type: 'doc',
+            docId: '{changelog_folder}/{doc_id}',
+            position: 'left',
+            label: '更新日志',
+          }},""")
+                            else:
+                                # 如果没有找到id，使用默认的changelog-index
+                                nav_items.append(f"""          {{
+            type: 'doc',
+            docId: '{changelog_folder}/changelog-index',
+            position: 'left',
+                            label: '更新日志',
+          }},""")
+                    except Exception as e:
+                        print(f"❌ 读取更新日志索引文件失败: {e}")
+                        # 使用默认的changelog-index
+                        nav_items.append(f"""          {{
+            type: 'doc',
+            docId: '{changelog_folder}/changelog-index',
+            position: 'left',
+            label: '更新日志',
+          }},""")
+                else:
+                    # 如果没有总览页面，查找年份索引
+                    year_index_id = self.find_year_index_id(changelog_folder)
+                    if year_index_id:
+                        nav_items.append(f"""          {{
+            type: 'doc',
+            docId: '{year_index_id}',
+            position: 'left',
+            label: '更新日志',
+          }},""")
+            
+            # 添加搜索项
+            nav_items.append(f"""          {{
+            type: 'search',
+            position: 'right',
+          }},""")
+            
+            # 构建新的items内容
+            new_items_content = "\n".join(nav_items)
+            
+            # 替换原内容
+            new_content = content[:match.start(1)] + new_items_content + content[match.end(1):]
+            
+            # 写入文件
+            with open(docusaurus_config_path, 'w', encoding='utf-8') as f:
+                f.write(new_content)
+            
+            print(f"✅ 已更新导航栏配置: {docusaurus_config_path}")
+            
+            # 同时更新重定向配置
+            self.update_redirects_config(folders)
+            
+        except Exception as e:
+            print(f"❌ 更新导航栏配置失败: {e}")
+    
+    def update_redirects_config(self, folders):
+        """
+        更新重定向配置
+        
+        Args:
+            folders: 检测到的文件夹列表
+        """
+        docusaurus_config_path = self.project_path / "docusaurus.config.js"
+        
+        if not docusaurus_config_path.exists():
+            return
+        
+        try:
+            # 读取配置文件
+            with open(docusaurus_config_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            
+            import re
+            
+            # 查找重定向配置部分
+            redirects_pattern = r'redirects:\s*\[(.*?)\]'
+            match = re.search(redirects_pattern, content, re.DOTALL)
+            
+            if not match:
+                print("⚠️  未找到重定向配置，跳过更新")
+                return
+            
+            print("📋 找到重定向配置，但跳过写入以避免破坏配置文件")
+            print("ℹ️  重定向配置已手动维护，不需要自动更新")
+            
+        except Exception as e:
+            print(f"⚠️  检查重定向配置失败: {e}")
+    
+    def find_main_doc_id(self, folder_name):
+        """
+        查找文件夹中的主文档ID
+        
+        Args:
+            folder_name: 文件夹名称
+        
+        Returns:
+            主文档ID或None
+        """
+        folder_path = self.docs_folder / folder_name
+        
+        if not folder_path.exists():
+            return None
+        
+        # 查找文件夹中的第一个MDX/MD文件
+        for file_item in folder_path.iterdir():
+            if file_item.is_file() and (file_item.name.endswith('.mdx') or file_item.name.endswith('.md')):
+                doc_id = self.get_doc_id_from_mdx(file_item)
+                if doc_id:
+                    return doc_id
+                else:
+                    # 如果没有文档ID，生成一个
+                    clean_name = self.clean_name(file_item.name)
+                    return f"{folder_name}/{clean_name}"
+        
+        return None
+    
+    def find_year_index_id(self, folder_name):
+        """
+        查找更新日志文件夹中的年份索引文档ID
+        
+        Args:
+            folder_name: 更新日志文件夹名称
+        
+        Returns:
+            年份索引文档ID或None
+        """
+        folder_path = self.docs_folder / folder_name
+        
+        if not folder_path.exists():
+            return None
+        
+        # 查找年份子文件夹
+        for sub_item in folder_path.iterdir():
+            if sub_item.is_dir():
+                year_folder = sub_item.name
+                # 检查年份文件夹中是否有index.md文件
+                index_file = sub_item / "index.md"
+                if index_file.exists():
+                    # 从index.md读取文档ID
+                    doc_id = self.get_doc_id_from_mdx(index_file)
+                    if doc_id:
+                        # 确保文档ID包含完整的路径
+                        if not doc_id.startswith(f"{folder_name}/"):
+                            doc_id = f"{folder_name}/{doc_id}"
+                        return doc_id
+                    else:
+                        # 如果没有文档ID，生成一个
+                        return f"{folder_name}/{year_folder}/{year_folder}"
+        
+        # 如果没有年份文件夹，查找第一个MDX/MD文件
+        for file_item in folder_path.iterdir():
+            if file_item.is_file() and (file_item.name.endswith('.mdx') or file_item.name.endswith('.md')):
+                doc_id = self.get_doc_id_from_mdx(file_item)
+                if doc_id:
+                    # 确保文档ID包含完整的路径
+                    if not doc_id.startswith(f"{folder_name}/"):
+                        doc_id = f"{folder_name}/{doc_id}"
+                    return doc_id
+                else:
+                    clean_name = self.clean_name(file_item.name)
+                    return f"{folder_name}/{clean_name}"
+        
+        return None
     
     def sort_by_number_prefix(self, items: List[str]) -> List[str]:
         """按数字前缀排序项目"""
@@ -147,19 +689,113 @@ class DeploymentManager:
             print(f"读取文档ID失败 {file_path}: {e}")
             return ""
     
-    def clean_name(self, name: str) -> str:
+    def get_category_label(self, folder_path: Path) -> str:
         """
-        清理名称 - 只移除.mdx扩展名
+        获取分类标签 - 优先从 _category_.json 读取，否则使用文件夹名
         
         Args:
-            name: 原始名称（如"主程序安装说明.mdx"）
+            folder_path: 文件夹路径
         
         Returns:
-            清理后的名称（如"主程序安装说明"）
+            分类标签
         """
-        # 只移除.mdx扩展名
+        folder_name = folder_path.name
+        
+        # 首先尝试从 _category_.json 读取
+        category_file = folder_path / "_category_.json"
+        if category_file.exists():
+            try:
+                with open(category_file, 'r', encoding='utf-8') as f:
+                    import json
+                    category_data = json.load(f)
+                    label = category_data.get('label', folder_name)
+                    print(f"  从_category_.json读取标签: {label}")
+                    return label
+            except Exception as e:
+                print(f"  读取_category_.json失败: {e}")
+        
+        # 如果没有 _category_.json，使用默认映射
+        label_mapping = {
+            "更新日志": "更新日志",
+            "云更新服务说明": "云更新服务说明",
+            "安装教程": "安装教程",
+            "补丁更新日志": "补丁更新日志"
+        }
+        
+        return label_mapping.get(folder_name, folder_name)
+    
+    def _get_mdx_files_in_folder(self, folder_path: Path) -> list:
+        """
+        获取文件夹中的MDX/MD文件
+        
+        Args:
+            folder_path: 文件夹路径
+        
+        Returns:
+            文件列表
+        """
+        files = []
+        if folder_path.exists() and folder_path.is_dir():
+            for item in folder_path.iterdir():
+                if item.is_file() and (item.name.endswith('.mdx') or item.name.endswith('.md')):
+                    files.append(item.name)
+        return files
+    
+    def _get_sorted_files_for_folder(self, folder_key: str, all_files: list) -> list:
+        """
+        根据配置文件获取排序后的文件列表
+        
+        Args:
+            folder_key: 文件夹键（如"更新日志/2026"）
+            all_files: 所有文件列表
+        
+        Returns:
+            排序后的文件列表
+        """
+        # 从配置文件读取排序
+        if hasattr(self, 'sort_config') and self.sort_config:
+            config_files = self.sort_config.get('files', {}).get(folder_key, [])
+            if config_files:
+                # 添加扩展名
+                config_files_with_ext = []
+                for file in config_files:
+                    # 根据文件类型添加扩展名
+                    if any(f.endswith('.md') for f in all_files):
+                        config_files_with_ext.append(f"{file}.md")
+                    else:
+                        config_files_with_ext.append(f"{file}.mdx")
+                
+                # 按配置顺序排序
+                sorted_files = []
+                for config_file in config_files_with_ext:
+                    if config_file in all_files:
+                        sorted_files.append(config_file)
+                        all_files.remove(config_file)
+                
+                # 添加剩余文件（按字母顺序）
+                for file_name in sorted(all_files):
+                    sorted_files.append(file_name)
+                
+                return sorted_files
+        
+        # 如果没有配置，按字母顺序排序
+        return sorted(all_files)
+    
+    def clean_name(self, name: str) -> str:
+        """
+        清理名称 - 移除.mdx或.md扩展名
+        
+        Args:
+            name: 原始名称（如"主程序安装说明.mdx"或"2026-04.md"）
+        
+        Returns:
+            清理后的名称（如"主程序安装说明"或"2026-04"）
+        """
+        # 移除.mdx或.md扩展名
         if name.endswith('.mdx'):
             return name[:-4]
+        elif name.endswith('.md'):
+            return name[:-3]
         return name
     
     def clean_name_for_url(self, name: str) -> str:
@@ -172,9 +808,11 @@ class DeploymentManager:
         Returns:
             清理后的英文名称（如"program-installation-guide"）
         """
-        # 移除.mdx扩展名
+        # 移除.mdx或.md扩展名
         if name.endswith('.mdx'):
             name = name[:-4]
+        elif name.endswith('.md'):
+            name = name[:-3]
         
         # 移除数字前缀（如"1-"或"1 -"）
         import re
@@ -299,16 +937,21 @@ class DeploymentManager:
             
             print(f"处理文件夹: {folder_name}")
             
-            # 获取文件夹中的文件
-            files = []
+            # 获取文件夹中的文件和子文件夹 - 支持 .mdx 和 .md 文件
+            files_and_folders = []
             for file_item in folder_path.iterdir():
-                if file_item.is_file() and file_item.name.endswith('.mdx'):
-                    files.append(file_item.name)
+                if file_item.is_file() and (file_item.name.endswith('.mdx') or file_item.name.endswith('.md')):
+                    files_and_folders.append(file_item.name)
+                elif file_item.is_dir():
+                    # 检查子文件夹中是否有MDX/MD文件
+                    sub_files = self._get_mdx_files_in_folder(file_item)
+                    if sub_files:
+                        files_and_folders.append(file_item.name)
             
-            print(f"  找到文件: {files}")
+            print(f"  找到文件和文件夹: {files_and_folders}")
             
             # 按照配置文件中的文件顺序
-            sorted_files = []
+            sorted_items = []
             if sort_config_path.exists():
                 try:
                     with open(sort_config_path, 'r', encoding='utf-8') as f:
@@ -318,41 +961,88 @@ class DeploymentManager:
                     
                     # 先添加配置文件中指定的文件
                     for config_file in config_files:
-                        config_file_with_ext = f"{config_file}.mdx"
-                        if config_file_with_ext in files:
-                            sorted_files.append(config_file_with_ext)
+                        # 根据文件夹类型确定扩展名
+                        if folder_name == "changelog":
+                            # changelog文件夹使用 .md 扩展名
+                            config_file_with_ext = f"{config_file}.md"
+                        else:
+                            # 其他文件夹使用 .mdx 扩展名
+                            config_file_with_ext = f"{config_file}.mdx"
+                        
+                        if config_file_with_ext in files_and_folders:
+                            sorted_items.append(config_file_with_ext)
                             print(f"    添加配置文件指定的文件: {config_file_with_ext}")
                 except Exception as e:
                     print(f"  读取文件配置失败: {e}")
             
-            # 再添加其他文件（按字母顺序）
-            for file_name in sorted(files):
-                if file_name not in sorted_files:
-                    sorted_files.append(file_name)
-                    print(f"    添加其他文件: {file_name}")
+            # 再添加其他项目（按字母顺序）
+            for item_name in sorted(files_and_folders):
+                if item_name not in sorted_items:
+                    sorted_items.append(item_name)
+                    print(f"    添加其他项目: {item_name}")
             
-            if sorted_files:
+            if sorted_items:
+                # 获取分类标签（优先从 _category_.json 读取）
+                category_label = self.get_category_label(folder_path)
                 lines.append("    {")
                 lines.append(f"      type: 'category',")
-                lines.append(f"      label: '{folder_name}',")
+                lines.append(f"      label: '{category_label}',")
                 lines.append(f"      items: [")
                 
-                for file_name in sorted_files:
-                    file_path = folder_path / file_name
-                    print(f"    处理文件: {file_name}")
+                for item_name in sorted_items:
+                    item_path = folder_path / item_name
+                    print(f"    处理项目: {item_name}")
                     
-                    # 使用文档ID格式：文件夹名/id
-                    # 首先尝试从MDX文件中读取id
-                    doc_id = self.get_doc_id_from_mdx(file_path)
-                    print(f"      从MDX读取的文档ID: {doc_id}")
-                    
-                    if not doc_id:
-                        # 如果没有id，使用清理后的文件名
-                        clean_file_name = self.clean_name(file_name)
-                        doc_id = f"{folder_name}/{clean_file_name}"
-                        print(f"      使用清理后的文件名作为文档ID: {doc_id}")
-                    
-                    lines.append(f"        '{doc_id}',")
+                    # 检查是否是文件夹
+                    if item_path.is_dir():
+                        # 处理子文件夹（年份文件夹）
+                        subfolder_name = item_name
+                        subfolder_path = folder_path / subfolder_name
+                        
+                        # 获取子文件夹中的文件
+                        sub_files = self._get_mdx_files_in_folder(subfolder_path)
+                        if sub_files:
+                            # 为子文件夹创建嵌套分类
+                            lines.append("      {")
+                            lines.append(f"        type: 'category',")
+                            lines.append(f"        label: '{subfolder_name}年',")
+                            lines.append(f"        items: [")
+                            
+                            # 获取子文件夹的排序配置
+                            subfolder_config_key = f"{folder_name}/{subfolder_name}"
+                            subfolder_sorted_files = self._get_sorted_files_for_folder(subfolder_config_key, sub_files)
+                            
+                            for sub_file_name in subfolder_sorted_files:
+                                sub_file_path = subfolder_path / sub_file_name
+                                print(f"      处理子文件: {sub_file_name}")
+                                
+                                # 获取文档ID
+                                sub_doc_id = self.get_doc_id_from_mdx(sub_file_path)
+                                if not sub_doc_id:
+                                    clean_sub_file_name = self.clean_name(sub_file_name)
+                                    sub_doc_id = f"{folder_name}/{subfolder_name}/{clean_sub_file_name}"
+                                else:
+                                    # 确保文档ID包含完整的文件夹路径
+                                    if not sub_doc_id.startswith(f"{folder_name}/"):
+                                        sub_doc_id = f"{folder_name}/{sub_doc_id}"
+                                
+                                lines.append(f"          '{sub_doc_id}',")
+                            
+                            lines.append(f"        ],")
+                            lines.append(f"        collapsed: true,")
+                            lines.append("      },")
+                    else:
+                        # 处理普通文件
+                        doc_id = self.get_doc_id_from_mdx(item_path)
+                        print(f"      从MDX读取的文档ID: {doc_id}")
+                        
+                        if not doc_id:
+                            # 如果没有id，使用清理后的文件名
+                            clean_file_name = self.clean_name(item_name)
+                            doc_id = f"{folder_name}/{clean_file_name}"
+                            print(f"      使用清理后的文件名作为文档ID: {doc_id}")
+                        
+                        lines.append(f"        '{doc_id}',")
                 
                 lines.append(f"      ],")
                 lines.append(f"      collapsed: true,")
@@ -435,7 +1125,7 @@ class DeploymentManager:
                 # 添加调试信息
                 debug_info = f"执行命令: {full_command}\n工作目录: {cwd}\n模式: shell\n"
                 
-                # 执行命令（使用shell模式）
+                # 执行命令（使用shell模式）- 隐藏控制台窗口
                 result = subprocess.run(
                     full_command,
                     cwd=cwd,
@@ -444,7 +1134,8 @@ class DeploymentManager:
                     encoding='utf-8',
                     errors='replace',  # 替换无法解码的字符
                     timeout=timeout,
-                    shell=True
+                    shell=True,
+                    creationflags=subprocess.CREATE_NO_WINDOW  # 隐藏控制台窗口
                 )
             else:
                 # 使用列表形式
@@ -458,7 +1149,7 @@ class DeploymentManager:
                 # 添加调试信息
                 debug_info = f"执行命令: {full_command}\n工作目录: {cwd}\n模式: 列表\n"
                 
-                # 执行命令（使用列表形式）
+                # 执行命令（使用列表形式）- 隐藏控制台窗口
                 result = subprocess.run(
                     cmd_list,
                     cwd=cwd,
@@ -467,7 +1158,8 @@ class DeploymentManager:
                     encoding='utf-8',
                     errors='replace',  # 替换无法解码的字符
                     timeout=timeout,
-                    shell=False
+                    shell=False,
+                    creationflags=subprocess.CREATE_NO_WINDOW  # 隐藏控制台窗口
                 )
             
             output = result.stdout
@@ -613,7 +1305,7 @@ class DeploymentManager:
             else:
                 startupinfo = None
             
-            # 启动进程
+            # 启动进程 - 隐藏控制台窗口
             process = subprocess.Popen(
                 cmd,
                 cwd=str(self.project_path),
@@ -621,7 +1313,7 @@ class DeploymentManager:
                 stderr=subprocess.PIPE,
                 startupinfo=startupinfo,
                 shell=True,
-                creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if sys.platform == "win32" else 0
+                creationflags=subprocess.CREATE_NO_WINDOW  # 隐藏控制台窗口
             )
             
             # 存储进程引用，以便后续检查

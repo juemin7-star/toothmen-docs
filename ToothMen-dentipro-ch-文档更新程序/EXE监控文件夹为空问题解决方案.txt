@@ -1,0 +1,57 @@
+EXE监控文件夹为空问题解决方案
+
+问题描述：
+用户运行 ToothMenDocsManager_simple_fixed.exe 时，程序可以启动但文件夹列表为空。
+
+已实施的修复：
+
+1. 路径问题修复：
+   - 修复了 EXE 环境中 Path(__file__).parent 无法正常工作的问题
+   - 将所有路径引用改为使用 self.project_path
+   - 配置文件路径：self.project_path / "config.json"
+   - 排序配置文件路径：self.project_path / "sort_config.json"
+
+2. 编码问题修复：
+   - 移除了所有 emoji 字符，避免 Windows 控制台编码问题
+   - 将 🔍、❌、📁、📄、✅、⚠️ 等 emoji 替换为 [DEBUG]、[ERROR]、[FOLDER]、[FILE]、[SUCCESS]、[WARNING] 等文本
+
+3. 调试信息增强：
+   - 在 finish_init() 方法中添加了详细的调试信息
+   - 在 refresh_folder_structure() 方法中添加了文件夹路径检查
+   - 所有调试信息都会显示在程序的日志区域
+
+4. 启动错误处理：
+   - 修复了 lambda 函数中变量捕获问题
+   - 改进了错误显示机制
+
+最新版本功能：
+- 程序启动时会显示项目路径和文档文件夹路径
+- 会检查文档文件夹是否存在
+- 会显示找到的文件夹数量
+- 所有信息都会记录在日志区域
+
+测试方法：
+1. 运行 dist\ToothMenDocsManager_simple_fixed.exe
+2. 查看程序日志区域，应该显示：
+   - 项目路径
+   - 文档文件夹路径
+   - 文件夹是否存在
+   - 找到的文件夹数量
+
+预期结果：
+程序应该显示以下信息：
+- 项目路径: D:\magicdental开发备忘录\toothmen-官方说明文档系统\ToothMen-Docs-Simple
+- 文档文件夹: D:\magicdental开发备忘录\toothmen-官方说明文档系统\ToothMen-Docs-Simple\docs
+- 文件夹是否存在: True
+- 找到 X 个文件夹: [文件夹列表]
+
+如果仍然显示为空，请检查：
+1. docs 文件夹是否确实存在且包含子文件夹
+2. 程序是否有权限访问该路径
+3. 路径中是否包含特殊字符
+
+最新打包的EXE位置：
+D:\magicdental开发备忘录\toothmen-官方说明文档系统\ToothMen-Docs-Simple\ToothMen-dentipro-ch-文档更新程序\dist\ToothMenDocsManager_simple_fixed.exe
+
+打包时间：2026-04-14
+版本：v3.16 修复版

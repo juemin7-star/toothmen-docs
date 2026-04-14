@@ -1,0 +1,107 @@
+# 关于AttributeError: 'ToothMenDocsManager' object has no attribute 'move_folder_up'错误的说明
+
+## 问题描述
+用户报告了以下错误：
+```
+Traceback (most recent call last): 
+   File "main_simple_fixed.py", line 442, in <module> 
+   File "main_simple_fixed.py", line 438, in main 
+   File "main_simple_fixed.py", line 55, in __init__ 
+   File "main_simple_fixed.py", line 168, in create_widgets 
+   File "main_simple_fixed.py", line 214, in create_folder_structure_area 
+ AttributeError: 'ToothMenDocsManager' object has no attribute 'move_folder_up'
+```
+
+## 问题分析
+
+### 1. 错误原因
+这个错误表示程序在创建排序按钮时，引用了`move_folder_up`方法，但这个方法在类中不存在。
+
+### 2. 版本差异
+- **用户运行的版本**：第442行报错，说明是旧版本
+- **当前修复版本**：文件只有635行，第442行是`def move_folder_down(self):`方法
+
+### 3. 可能的原因
+1. **运行了旧版本的EXE文件**：用户可能运行的是之前打包的`ToothMenDocsManager_simple.exe`而不是最新的`ToothMenDocsManager_simple_fixed.exe`
+2. **运行了旧版本的Python脚本**：用户可能运行的是修复前的`main_simple_fixed.py`
+3. **缓存问题**：Python可能缓存了旧版本的模块
+
+## 解决方案
+
+### 方案一：使用最新修复的EXE文件
+1. 删除旧的EXE文件（如果有）
+2. 运行最新的EXE文件：`dist\ToothMenDocsManager_simple_fixed.exe`
+3. 或者运行测试脚本：`测试修复版EXE.bat`
+
+### 方案二：使用最新修复的Python脚本
+1. 确保使用的是最新的`main_simple_fixed.py`文件
+2. 运行测试脚本：`测试最新修复版本.bat`
+3. 或者直接运行：`python main_simple_fixed.py`
+
+### 方案三：清除Python缓存
+如果仍然有问题，可以尝试清除Python缓存：
+```bash
+# 删除__pycache__文件夹
+rmdir /s /q __pycache__
+
+# 重新运行程序
+python main_simple_fixed.py
+```
+
+## 验证修复
+
+### 验证步骤
+1. 运行`测试最新修复版本.bat`
+2. 观察输出：
+   - ✅ 如果程序正常运行并显示GUI窗口 → 修复成功
+   - ❌ 如果出现AttributeError错误 → 仍然运行的是旧版本
+
+### 当前修复状态
+✅ **已经修复的问题**：
+1. 添加了所有缺失的排序方法：
+   - `move_folder_up()`
+   - `move_folder_down()`
+   - `move_file_up()`
+   - `move_file_down()`
+   - `save_sort_config()`
+   - `on_tree_selection()`
+   - `on_tree_double_click()`
+2. 修复了文件夹刷新问题
+3. 重新打包了EXE文件
+
+## 文件清单
+
+### 最新修复的文件
+1. `main_simple_fixed.py` - 修复后的主程序（635行）
+2. `dist\ToothMenDocsManager_simple_fixed.exe` - 最新打包的EXE
+3. `simple_pack.spec` - 打包配置文件
+
+### 测试脚本
+1. `测试修复版EXE.bat` - 测试EXE文件
+2. `测试最新修复版本.bat` - 测试Python脚本
+3. `测试修复版EXE.bat` - 启动EXE的脚本
+
+### 说明文档
+1. `修复总结.txt` - 修复过程总结
+2. `文件夹列表为空问题修复说明.txt` - 文件夹刷新问题说明
+3. `关于AttributeError错误的说明.txt` - 本文档
+
+## 使用建议
+
+### 推荐使用方式
+1. **直接使用EXE**：运行`dist\ToothMenDocsManager_simple_fixed.exe`
+2. **使用测试脚本**：运行`测试修复版EXE.bat`
+
+### 避免的问题
+1. ❌ 不要运行旧的`ToothMenDocsManager_simple.exe`
+2. ❌ 不要运行修复前的`main_simple_fixed.py`旧版本
+3. ✅ 确保使用最新的修复版本
+
+## 技术支持
+如果问题仍然存在，请提供以下信息：
+1. 运行的是哪个文件（完整路径）
+2. 文件的修改时间
+3. 完整的错误信息
+4. 运行`测试最新修复版本.bat`的输出结果
+
+修复完成时间：2026-04-14

@@ -1,0 +1,197 @@
+⚠️ 重要：docusaurus.config.js 配置文件保护说明
+
+## 🔧 问题重现：
+用户多次修改 `docusaurus.config.js` 文件，将其改为MDX格式，导致构建失败：
+```
+[14:27:33] ❌ 构建失败: [ERROR] Error: Docusaurus could not load module at path "D:\...\docusaurus.config.js"
+[cause]: Error: ParseError: D:\: Invalid left-hand side in prefix operation.
+```
+
+## 📁 文件类型说明：
+
+### 1. docusaurus.config.js（必须）
+- **文件类型**：JavaScript配置文件
+- **用途**：Docusaurus网站的主配置文件
+- **内容**：必须是有效的JavaScript代码
+- **示例**：
+  ```javascript
+  // @ts-check
+  /** @type {import('@docusaurus/types').Config} */
+  const config = {
+    title: 'ToothMen文档系统',
+    tagline: 'ToothMen官方说明文档',
+    // ... 其他配置
+  };
+  module.exports = config;
+  ```
+
+### 2. changelog-index.md（可选）
+- **文件类型**：MDX/Markdown文档文件
+- **用途**：更新日志总览页面
+- **位置**：`docs/Denti-Pro更新日志/changelog-index.md`
+- **内容**：MDX格式的文档内容
+- **示例**：
+  ```mdx
+  ---
+  id: changelog-index
+  title: Denti-Pro更新日志总览
+  sidebar_label: 更新日志总览
+  ---
+  
+  # Denti-Pro更新日志总览
+  
+  这里是Denti-Pro所有更新记录的总览页面，按年份分类展示。
+  ```
+
+## ❌ 错误做法：
+将MDX内容写入 `docusaurus.config.js`：
+```javascript
+// ❌ 错误！这是MDX内容，不是JavaScript配置
+---
+id: changelog-index
+title: Denti-Pro更新日志总览
+sidebar_label: 更新日志总览
+---
+
+# Denti-Pro更新日志总览
+```
+
+## ✅ 正确做法：
+1. **保持 `docusaurus.config.js` 为JavaScript文件**
+2. **MDX内容放在 `docs/` 目录下的对应文件中**
+3. **不要混合两种文件类型**
+
+## 🛡️ 保护措施：
+
+### 1. 创建配置文件备份：
+```powershell
+# 备份当前配置文件
+Copy-Item docusaurus.config.js docusaurus.config.js.backup.$(Get-Date -Format "yyyyMMdd")
+```
+
+### 2. 验证配置文件：
+```powershell
+# 检查配置文件是否为JavaScript
+node -c docusaurus.config.js
+```
+
+### 3. 自动修复脚本（可选）：
+```python
+import os
+import json
+
+def check_docusaurus_config():
+    config_path = "docusaurus.config.js"
+    if os.path.exists(config_path):
+        with open(config_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        # 检查是否是MDX格式（包含YAML frontmatter）
+        if content.strip().startswith('---'):
+            print("⚠️  检测到docusaurus.config.js被写入了MDX内容")
+            print("🔄 正在恢复默认配置...")
+            
+            # 恢复默认配置
+            default_config = '''// @ts-check
+/** @type {import('@docusaurus/types').Config} */
+const config = {
+  title: 'ToothMen文档系统',
+  tagline: 'ToothMen官方说明文档',
+  favicon: 'img/favicon.ico',
+  url: 'https://your-docusaurus-site.example.com',
+  baseUrl: '/',
+  organizationName: 'toothmen',
+  projectName: 'toothmen-docs',
+  onBrokenLinks: 'warn',
+  onBrokenMarkdownLinks: 'warn',
+  i18n: {
+    defaultLocale: 'zh-Hans',
+    locales: ['zh-Hans'],
+  },
+  presets: [
+    [
+      'classic',
+      ({
+        docs: {
+          sidebarPath: require.resolve('./sidebars.js'),
+        },
+        blog: false,
+        theme: {
+          customCss: require.resolve('./src/css/custom.css'),
+        },
+      }),
+    ],
+  ],
+  themeConfig: {
+    navbar: {
+      title: 'ToothMen文档',
+      items: [
+        {
+          type: 'docSidebar',
+          sidebarId: 'tutorialSidebar',
+          position: 'left',
+          label: '文档',
+        },
+        {
+          type: 'search',
+          position: 'right',
+        },
+      ],
+    },
+    footer: {
+      style: 'dark',
+      links: [
+        {
+          title: '文档',
+          items: [
+            {
+              label: '文档首页',
+              to: '/docs',
+            },
+          ],
+        },
+      ],
+      copyright: `Copyright © ${new Date().getFullYear()} ToothMen. Built with Docusaurus.`,
+    },
+  },
+  plugins: [
+    [
+      require.resolve("@easyops-cn/docusaurus-search-local"),
+      {
+        hashed: true,
+        language: ["en", "zh"],
+        highlightSearchTermsOnTargetPage: true,
+        explicitSearchResultPath: true,
+      },
+    ],
+  ],
+};
+
+module.exports = config;'''
+            
+            with open(config_path, 'w', encoding='utf-8') as f:
+                f.write(default_config)
+            
+            print("✅ 配置文件已恢复")
+```
+
+## 🎯 当前状态：
+1. ✅ `docusaurus.config.js` 已恢复为正确的JavaScript配置
+2. ✅ 构建测试可以成功执行
+3. ✅ 阶梯顺序功能正常
+4. ✅ 所有按钮功能正常
+
+## 📁 重要提醒：
+- **不要手动编辑 `docusaurus.config.js`**，除非你知道自己在做什么
+- 如果需要修改网站配置，请参考Docusaurus官方文档
+- 文档内容应该放在 `docs/` 目录下的MDX文件中
+- 配置文件应该保持为JavaScript格式
+
+## ⚡ 如果再次出现构建失败：
+1. 检查 `docusaurus.config.js` 文件内容
+2. 确保它是JavaScript格式，不是MDX格式
+3. 如果需要，使用上面的自动修复脚本
+
+**现在程序可以正常使用了！**
+
+更新时间：2026-04-14

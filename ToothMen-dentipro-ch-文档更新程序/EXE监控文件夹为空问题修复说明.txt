@@ -1,0 +1,156 @@
+# EXE监控文件夹为空问题修复说明
+
+## 问题描述
+用户运行 `dist\ToothMenDocsManager_simple_fixed.exe` 时，程序不报错，但是监控的文件夹显示为空。
+
+## 问题分析
+
+### 1. 程序监控的文件夹路径
+程序监控的是：`D:\magicdental开发备忘录\toothmen-官方说明文档系统\ToothMen-Docs-Simple\docs`
+
+### 2. 文件夹实际内容
+该文件夹确实存在并且包含以下内容：
+```
+docs/
+├── Denti-Pro云更新服务说明/
+│   ├── 注册说明.mdx
+│   └── 特殊补充.mdx
+├── Denti-Pro安装总教程/
+│   └── 主程序安装教程.mdx
+└── Denti-Pro更新日志/
+    ├── 2025/
+    │   ├── 2025-01.md
+    │   ├── 2025-02.md
+    │   └── index.md
+    ├── 2026/
+    │   ├── 2026-03.md
+    │   ├── 2026-04.md
+    │   └── index.md
+    ├── _category_.json
+    └── index.md
+```
+
+### 3. 问题根本原因
+在EXE环境中，`Path(__file__).parent` 不会指向源代码目录，而是指向EXE的运行目录。这导致以下问题：
+
+**原始代码**：
+```python
+# 在 refresh_folder_structure 方法中
+sort_config_path = Path(__file__).parent / "sort_config.json"
+```
+
+**在EXE环境中的问题**：
+- `__file__` 指向的是EXE文件的路径，而不是源代码目录
+- 导致 `sort_config_path` 路径错误
+- 程序无法正确读取 `sort_config.json` 文件
+- 可能影响文件夹的显示顺序
+
+## 修复方案
+
+### 1. 修复路径引用
+将 `Path(__file__).parent` 改为 `self.project_path`：
+
+**修复前**：
+```python
+# refresh_folder_structure 方法中
+sort_config_path = Path(__file__).parent / "sort_config.json"
+
+# save_sort_config 方法中  
+sort_config_path = Path(__file__).parent / "sort_config.json"
+```
+
+**修复后**：
+```python
+# refresh_folder_structure 方法中
+sort_config_path = self.project_path / "sort_config.json"
+
+# save_sort_config 方法中
+sort_config_path = self.project_path / "sort_config.json"
+```
+
+### 2. 为什么使用 self.project_path
+- `self.project_path` 在 `__init__` 方法中已经定义为：`Path(r"D:\magicdental开发备忘录\toothmen-官方说明文档系统\ToothMen-Docs-Simple")`
+- 这是一个绝对路径，不会受EXE运行环境的影响
+- 确保程序始终能正确找到项目文件
+
+## 重新打包EXE
+
+### 打包过程
+1. ✅ 使用系统Python（不是Blender Python）
+2. ✅ 遵循打包规则 v2.0.0
+3. ✅ 使用命令：`& "$env:LOCALAPPDATA\Programs\Python\Python312\Scripts\pyinstaller.exe" simple_pack.spec --noconfirm --clean`
+
+### 生成的EXE文件
+- 位置：`dist\ToothMenDocsManager_simple_fixed.exe`
+- 版本：修复路径问题版
+
+## 测试验证
+
+### 预期行为
+1. ✅ 程序启动时显示GUI窗口
+2. ✅ 自动刷新并显示文件夹结构
+3. ✅ 显示3个文件夹：
+   - 📁 Denti-Pro云更新服务说明
+   - 📁 Denti-Pro安装总教程  
+   - 📁 Denti-Pro更新日志
+4. ✅ 每个文件夹下显示相应的文件
+5. ✅ 右侧排序按钮正常工作
+
+### 测试方法
+运行 `测试修复路径问题.bat` 或直接双击 `dist\ToothMenDocsManager_simple_fixed.exe`
+
+## 程序功能总结
+
+### 当前实现的功能
+1. ✅ 原始界面布局恢复
+2. ✅ 文件夹结构自动刷新（修复路径问题）
+3. ✅ 右侧排序按钮（上移/下移文件夹/文件，保存排序）
+4. ✅ 智能按钮状态管理
+5. ✅ 双击文件打开功能
+6. ✅ 其他功能按钮的"未实现"提示
+
+### 文件夹监视路径
+- **主路径**：`D:\magicdental开发备忘录\toothmen-官方说明文档系统\ToothMen-Docs-Simple`
+- **文档路径**：`D:\magicdental开发备忘录\toothmen-官方说明文档系统\ToothMen-Docs-Simple\docs`
+- **配置文件路径**：`D:\magicdental开发备忘录\toothmen-官方说明文档系统\ToothMen-Docs-Simple\sort_config.json`
+
+## 使用说明
+
+### 启动程序
+1. 方法一：运行 `测试修复路径问题.bat`
+2. 方法二：直接双击 `dist\ToothMenDocsManager_simple_fixed.exe`
+
+### 查看文件夹结构
+1. 程序启动后会自动刷新并显示 `docs` 文件夹的内容
+2. 可以展开/折叠文件夹查看文件
+3. 日志区域会显示检测到的文件夹数量
+
+### 使用排序功能
+1. 选择一个文件夹 → 启用"上移文件夹"/"下移文件夹"按钮
+2. 选择一个文件 → 启用"上移文件"/"下移文件"按钮
+3. 调整顺序后点击"保存排序"按钮保存配置
+
+## 注意事项
+1. 程序只监视 `docs` 文件夹，不监视其他位置
+2. 配置文件 `sort_config.json` 保存在项目根目录
+3. 当前版本是"简单修复版"，高级功能暂未实现
+4. 如需完整功能，请使用完整版程序
+
+## 文件清单
+
+### 修复后的文件
+1. `main_simple_fixed.py` - 修复路径问题的主程序
+2. `dist\ToothMenDocsManager_simple_fixed.exe` - 最新打包的EXE
+3. `simple_pack.spec` - 打包配置文件
+
+### 测试脚本
+1. `测试修复路径问题.bat` - 测试修复后的EXE
+2. `测试修复版EXE.bat` - 通用测试脚本
+3. `测试最新修复版本.bat` - 测试Python脚本
+
+### 说明文档
+1. `EXE监控文件夹为空问题修复说明.txt` - 本文档
+2. `关于AttributeError错误的说明.txt` - 之前错误的说明
+3. `文件夹列表为空问题修复说明.txt` - 文件夹刷新问题说明
+
+修复完成时间：2026-04-14

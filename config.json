@@ -1,0 +1,15 @@
+{
+  "project_path": "D:\\magicdental开发备忘录\\toothmen-官方说明文档系统\\ToothMen-Docs-Simple",
+  "docs_folder": "D:\\magicdental开发备忘录\\toothmen-官方说明文档系统\\ToothMen-Docs-Simple\\docs",
+  "sidebars_path": "D:\\magicdental开发备忘录\\toothmen-官方说明文档系统\\ToothMen-Docs-Simple\\sidebars.js",
+  "npm_path": "npm",
+  "git_path": "C:\\Program Files\\Git\\cmd\\git.exe",
+  "auto_refresh": true,
+  "log_level": "INFO",
+  "reverse_order_folders": [
+    "补丁更新日志",
+    "patch-notes",
+    "更新记录",
+    "changelog"
+  ]
+}
