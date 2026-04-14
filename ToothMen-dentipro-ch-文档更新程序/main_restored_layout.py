@@ -1254,11 +1254,19 @@ module.exports = config;"""
                             # 404是正常的，Cloudflare可能还在部署中
                             self.log(f"⚠️  网站返回404: {url}", "warning")
                             continue
+                        elif e.code == 403:
+                            # 403也是正常的，Cloudflare可能还在构建或有限制
+                            self.log(f"⚠️  网站返回403: {url} (Cloudflare构建中或访问限制)", "warning")
+                            continue
                         else:
-                            self.log(f"❌ 网站HTTP错误 {e.code}: {url}", "error")
+                            # 安全地处理错误信息，避免编码问题
+                            error_msg = f"网站HTTP错误 {e.code}: {url}"
+                            self.log(error_msg, "error")
                             continue
                     except urllib.error.URLError as e:
-                        # 其他URL错误
+                        # 安全地处理URL错误，避免编码问题
+                        error_msg = f"URL错误: {str(e.reason) if e.reason else str(e)}"
+                        self.log(error_msg, "warning")
                         continue
                 
                 if site_accessible:
@@ -1312,7 +1320,17 @@ module.exports = config;"""
                 self.log("📱 请手动访问网站确认更新效果", "info")
                 
             except Exception as e:
-                self.log(f"❌ 部署验证失败: {str(e)}", "error")
+                # 安全地处理异常，避免编码问题
+                try:
+                    error_msg = str(e)
+                    # 如果是编码错误，提供更友好的信息
+                    if "'ascii' codec" in error_msg:
+                        self.log("❌ 部署验证失败: 编码错误（可能是中文字符处理问题）", "error")
+                        self.log("ℹ️  网站可能正在构建中，请稍后手动访问确认", "info")
+                    else:
+                        self.log(f"❌ 部署验证失败: {error_msg}", "error")
+                except:
+                    self.log("❌ 部署验证失败: 未知错误", "error")
         
         thread = threading.Thread(target=_verify_deployment)
         thread.daemon = True
