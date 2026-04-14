@@ -23,8 +23,10 @@ class DeploymentManager:
             project_path: 项目根目录路径
         """
         self.project_path = Path(project_path)
+        self.tool_path = self.project_path / "ToothMen-dentipro-ch-文档更新程序"
         self.docs_folder = self.project_path / "docs"
         self.sidebars_path = self.project_path / "sidebars.js"
+        self.sort_config_path = self.tool_path / "sort_config.json"
         
         # 命令路径配置
         self.npm_path = "npm.cmd"  # Windows上使用npm.cmd
@@ -237,7 +239,7 @@ class DeploymentManager:
         
         # 步骤2: 严格使用现有排序配置（不再自动检测/覆盖顺序）
         print("📋 步骤2: 使用已保存排序配置（仅上下移动+保存排序生效）")
-        sort_config_path = Path(__file__).parent / "sort_config.json"
+        sort_config_path = self.sort_config_path
         if not sort_config_path.exists():
             error_msg = "未找到sort_config.json，请先在界面中完成排序并点击“保存排序”"
             print(f"❌ {error_msg}")
@@ -318,7 +320,7 @@ class DeploymentManager:
         Args:
             folders: 检测到的文件夹列表
         """
-        sort_config_path = Path(__file__).parent / "sort_config.json"
+        sort_config_path = self.sort_config_path
         
         # 读取现有配置
         config = {}
@@ -907,7 +909,7 @@ class DeploymentManager:
         lines.append("  tutorialSidebar: [")
         
         # 读取排序配置文件
-        sort_config_path = Path(__file__).parent / "sort_config.json"
+        sort_config_path = self.sort_config_path
         
         # 获取文件夹列表（按配置或按字母顺序）
         folders = []
@@ -1281,7 +1283,7 @@ class DeploymentManager:
         except Exception as e:
             return False, f"构建测试异常: {str(e)}"
     
-    def local_preview(self):
+    def local_preview(self, prefer_fresh=True):
         """
         启动本地预览（自动选择可用端口并确认HTTP可访问）
         
@@ -1320,11 +1322,12 @@ class DeploymentManager:
             # 优先端口：3000，不可用则自动切到3001/3002
             candidate_ports = [3000, 3001, 3002]
             
-            # 先检查是否已有可访问服务
-            for p in candidate_ports:
-                if is_port_open(p) and is_http_accessible(p):
-                    self.preview_url = f"http://localhost:{p}"
-                    return True, f"本地服务器已在运行 (端口 {p})，请访问 {self.preview_url}"
+            # 非强制刷新模式：若已有可访问服务，直接复用
+            if not prefer_fresh:
+                for p in candidate_ports:
+                    if is_port_open(p) and is_http_accessible(p):
+                        self.preview_url = f"http://localhost:{p}"
+                        return True, f"本地服务器已在运行 (端口 {p})，请访问 {self.preview_url}"
             
             # 在Windows上隐藏控制台窗口
             if sys.platform == "win32":
@@ -1339,6 +1342,11 @@ class DeploymentManager:
             launch_errors = []
             
             for port in candidate_ports:
+                # 强制刷新模式：端口已占用时跳过，避免复用旧服务
+                if prefer_fresh and is_port_open(port):
+                    launch_errors.append(f"端口{port}已占用（强制新预览模式，已跳过）")
+                    continue
+                
                 # 端口被占用但HTTP不可达，直接跳过该端口
                 if is_port_open(port) and not is_http_accessible(port):
                     launch_errors.append(f"端口{port}已被占用但HTTP不可访问，已跳过")
@@ -1380,8 +1388,8 @@ class DeploymentManager:
                                 err_text = (stderr or "").strip()
                             except Exception:
                                 err_text = ""
-                            # 端口已占用且可访问，按成功处理
-                            if "already running on port" in err_text.lower() and is_http_accessible(port):
+                            # 非强制刷新模式下，端口已占用且可访问，按成功处理
+                            if (not prefer_fresh) and "already running on port" in err_text.lower() and is_http_accessible(port):
                                 self.preview_url = f"http://localhost:{port}"
                                 return True, f"检测到端口{port}已有预览服务在运行，可直接访问 {self.preview_url}"
                             launch_errors.append(f"{' '.join(cmd)} -> {err_text[:300]}")

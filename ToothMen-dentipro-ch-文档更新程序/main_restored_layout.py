@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-ToothMen文档管理工具 v3.18 - 恢复原始布局版
+ToothMen文档管理工具 v3.20
 功能：文件夹分类管理 + 自动化部署工作流 + 完整构建流程
 按照数字前缀文件夹结构自动生成分类侧边栏
 包含缓存清理功能
@@ -29,7 +29,7 @@ from mdx_checker import MDXChecker
 class ToothMenDocsManager:
     def __init__(self, root):
         self.root = root
-        self.root.title("ToothMen-DentiPro-中文版·文档管理系统 v3.18 - 恢复原始布局")
+        self.root.title("ToothMen-DentiPro-中文版·文档管理系统 v3.20")
         self.root.geometry("1400x1000")
         
         # 立即显示窗口，避免闪烁
@@ -43,8 +43,10 @@ class ToothMenDocsManager:
         
         # 项目路径
         self.project_path = Path(r"D:\magicdental开发备忘录\toothmen-官方说明文档系统\ToothMen-Docs-Simple")
+        self.tool_path = self.project_path / "ToothMen-dentipro-ch-文档更新程序"
         self.docs_folder = self.project_path / "docs"  # 直接监控docs文件夹
         self.sidebars_path = self.project_path / "sidebars.js"
+        self.sort_config_path = self.tool_path / "sort_config.json"
         
         # 确保docs文件夹存在
         self.docs_folder.mkdir(exist_ok=True)
@@ -472,7 +474,7 @@ module.exports = config;"""
         main_frame.rowconfigure(3, weight=1)  # 日志和调试工具区域
         
         # 创建顶部标题
-        title_label = ttk.Label(main_frame, text="ToothMen-DentiPro-中文版·文档管理系统 v3.18 - 恢复原始布局", 
+        title_label = ttk.Label(main_frame, text="ToothMen-DentiPro-中文版·文档管理系统 v3.20", 
                                font=("Arial", 16, "bold"))
         title_label.grid(row=0, column=0, columnspan=2, pady=(0, 10))
         
@@ -583,29 +585,21 @@ module.exports = config;"""
         row1_frame = ttk.Frame(control_frame)
         row1_frame.grid(row=0, column=0, sticky=tk.W, pady=(0, 5))
         
-        # 清理缓存按钮（第一行第一个）
-        self.clean_cache_btn = ttk.Button(row1_frame, text="🧹 清理缓存", command=self.clean_cache)
-        self.clean_cache_btn.grid(row=0, column=0, padx=5)
-        
-        # 检测MDX语法按钮（第一行第二个）
+        # 检测MDX语法按钮（第一行第一个）
         self.check_mdx_btn = ttk.Button(row1_frame, text="检测MDX语法", command=self.check_mdx_syntax)
-        self.check_mdx_btn.grid(row=0, column=1, padx=5)
+        self.check_mdx_btn.grid(row=0, column=0, padx=5)
         
-        # 开始流程按钮（第一行第三个）- 启用下面的按钮
+        # 开始流程按钮（第一行第二个）- 启用下面的按钮
         self.start_workflow_btn = ttk.Button(row1_frame, text="开始流程", command=self.start_workflow)
-        self.start_workflow_btn.grid(row=0, column=2, padx=5)
+        self.start_workflow_btn.grid(row=0, column=1, padx=5)
         
-        # 结束流程按钮（第一行第四个）
+        # 结束流程按钮（第一行第三个）
         self.deploy_end_btn = ttk.Button(row1_frame, text="结束流程", command=self.end_deployment, state=tk.DISABLED)
-        self.deploy_end_btn.grid(row=0, column=3, padx=5)
+        self.deploy_end_btn.grid(row=0, column=2, padx=5)
         
-        # 验证部署按钮（第一行第五个）- 位置调整（删除开始部署按钮）
+        # 验证部署按钮（第一行第四个）
         self.verify_deploy_btn = ttk.Button(row1_frame, text="验证部署", command=self.verify_deployment)
-        self.verify_deploy_btn.grid(row=0, column=4, padx=5)
-        
-        # 生成有效链接按钮（避免历史坏链）
-        self.valid_links_btn = ttk.Button(row1_frame, text="有效链接", command=self.show_valid_doc_links)
-        self.valid_links_btn.grid(row=0, column=5, padx=5)
+        self.verify_deploy_btn.grid(row=0, column=3, padx=5)
         
         # 第二行：部署步骤按钮
         row2_frame = ttk.Frame(control_frame)
@@ -722,7 +716,7 @@ module.exports = config;"""
                     all_folders.append(item.name)
             
             # 读取排序配置文件
-            sort_config_path = Path(__file__).parent / "sort_config.json"
+            sort_config_path = self.sort_config_path
             display_folders = []
             
             if sort_config_path.exists():
@@ -998,6 +992,16 @@ module.exports = config;"""
         if step == "保存顺序":
             success = self.save_sort_config()
             if success:
+                # 默认自动执行清理缓存，并记录过程与结果
+                self.log("🧹 保存顺序后自动清理缓存...", "info")
+                try:
+                    cache_success, cache_message = self.deployment_manager.clean_cache(thorough=True)
+                    if cache_success:
+                        self.log(f"✅ 自动清理缓存完成: {cache_message}", "success")
+                    else:
+                        self.log(f"⚠️  自动清理缓存失败: {cache_message}", "warning")
+                except Exception as e:
+                    self.log(f"⚠️  自动清理缓存异常: {str(e)}", "warning")
                 self.enable_next_step()
             else:
                 if self.current_step_index < len(self.step_buttons):
@@ -1081,7 +1085,7 @@ module.exports = config;"""
         def _local_preview():
             self.log("🚀 启动本地预览服务器...", "info")
             try:
-                success, message = self.deployment_manager.local_preview()
+                success, message = self.deployment_manager.local_preview(prefer_fresh=True)
                 if success:
                     self.log(f"✅ {message}", "success")
                     try:
@@ -1506,66 +1510,6 @@ module.exports = config;"""
         thread = threading.Thread(target=_verify_deployment)
         thread.daemon = True
         thread.start()
-    
-    def show_valid_doc_links(self):
-        """自动生成并显示当前有效文档链接（基于sidebars.js中的文档ID）"""
-        self.log("🔗 开始生成当前有效文档链接...", "info")
-        
-        try:
-            if not self.sidebars_path.exists():
-                self.log(f"❌ sidebars文件不存在: {self.sidebars_path}", "error")
-                return
-            
-            with open(self.sidebars_path, "r", encoding="utf-8") as f:
-                content = f.read()
-            
-            import re
-            from urllib.parse import quote
-            
-            doc_ids = []
-            
-            # 1) 兼容对象格式: { type: 'doc', id: 'xxx' }
-            for match in re.finditer(r"id:\s*'([^']+)'", content):
-                doc_ids.append(match.group(1).strip())
-            
-            # 2) 兼容字符串格式: 'folder/doc-id',
-            for match in re.finditer(r"^\s*'([^']+)'\s*,?\s*$", content, re.MULTILINE):
-                candidate = match.group(1).strip()
-                # 过滤明显不是文档ID的字符串（例如纯年份标签）
-                if candidate and "/" in candidate:
-                    doc_ids.append(candidate)
-            
-            # 去重并保持顺序
-            unique_doc_ids = []
-            seen = set()
-            for item in doc_ids:
-                if item not in seen:
-                    seen.add(item)
-                    unique_doc_ids.append(item)
-            
-            if not unique_doc_ids:
-                self.log("⚠️ 未从sidebars.js中提取到文档ID", "warning")
-                return
-            
-            docs_home = "https://docs.toothmen.com/docs"
-            urls = []
-            for doc_id in unique_doc_ids:
-                encoded_id = "/".join(quote(seg, safe="-_.~") for seg in doc_id.split("/"))
-                urls.append(f"{docs_home}/{encoded_id}")
-            
-            self.log(f"✅ 已生成 {len(urls)} 条有效文档链接", "success")
-            self.log(f"🌐 文档首页: {docs_home}", "info")
-            for i, url in enumerate(urls, start=1):
-                self.log(f"  {i}. {url}", "info")
-            
-            # 复制到剪贴板，便于直接发给同事或验证
-            clip_text = "文档首页:\n" + docs_home + "\n\n有效文档链接:\n" + "\n".join(urls)
-            self.root.clipboard_clear()
-            self.root.clipboard_append(clip_text)
-            self.log("📋 有效链接已复制到剪贴板", "success")
-            
-        except Exception as e:
-            self.log(f"❌ 生成有效链接失败: {str(e)}", "error")
     
     # ========== 调试工具方法 ==========
     
@@ -2109,12 +2053,10 @@ module.exports = config;"""
         self.set_button_state(self.btn_save_sort, "disabled")
         
         # 重置控制按钮
-        self.set_button_state(self.clean_cache_btn, "normal")
         self.set_button_state(self.check_mdx_btn, "normal")
         self.set_button_state(self.start_workflow_btn, "normal")
         self.set_button_state(self.deploy_end_btn, "disabled")
         self.set_button_state(self.verify_deploy_btn, "normal")
-        self.set_button_state(self.valid_links_btn, "normal")
         self.set_button_state(self.btn_refresh_structure, "normal")
         
         # 重置部署步骤按钮
@@ -2304,7 +2246,7 @@ module.exports = config;"""
         success = False
         try:
             # 读取现有的排序配置
-            sort_config_path = Path(__file__).parent / "sort_config.json"
+            sort_config_path = self.sort_config_path
             if sort_config_path.exists():
                 with open(sort_config_path, 'r', encoding='utf-8') as f:
                     sort_config = json.load(f)

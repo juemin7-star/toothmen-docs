@@ -27,7 +27,6 @@ const sidebars = {
         items: [
           'Denti-Pro更新日志/2026/2026-03',
           'Denti-Pro更新日志/2026/2026-04',
-          'Denti-Pro更新日志/2026/2026',
         ],
         collapsed: true,
       },
@@ -37,7 +36,6 @@ const sidebars = {
         items: [
           'Denti-Pro更新日志/2025/2025-01',
           'Denti-Pro更新日志/2025/2025-02',
-          'Denti-Pro更新日志/2025/2025',
         ],
         collapsed: true,
       },
