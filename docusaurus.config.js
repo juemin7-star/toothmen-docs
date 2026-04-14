@@ -61,13 +61,13 @@ const config = {
         },
         items: [          {
             type: 'doc',
-            docId: 'Denti-Pro安装总教程/main-program-installation-guide',
+            docId: 'install/index',
             position: 'left',
             label: '总文档中心',
           },
           {
             type: 'doc',
-            docId: 'Denti-Pro更新日志/2026/2026-04',
+            docId: 'changelog/index',
             position: 'left',
             label: '更新日志',
           },
@@ -90,7 +90,7 @@ const config = {
     }),
 
   plugins: [
-    // /docs 入口由 docs/index.mdx 内 Redirect 处理，避免与 client-redirects 插件争用 index.html
+    // /docs 入口为 docs/index.mdx（文档门户）
     // 本地搜索插件
     [
       require.resolve("@easyops-cn/docusaurus-search-local"),

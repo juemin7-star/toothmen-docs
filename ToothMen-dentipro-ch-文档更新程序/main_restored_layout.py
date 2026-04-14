@@ -231,13 +231,13 @@ class ToothMenDocsManager:
             navbar_items = [
                 {
                     'type': 'doc',
-                    'docId': 'Denti-Pro安装总教程/main-program-installation-guide',
+                    'docId': 'install/index',
                     'position': 'left',
                     'label': '总文档中心',
                 },
                 {
                     'type': 'doc',
-                    'docId': 'Denti-Pro更新日志/changelog-index',
+                    'docId': 'changelog/index',
                     'position': 'left',
                     'label': '更新日志',
                 },

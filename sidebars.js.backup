@@ -2,22 +2,23 @@ const sidebars = {
   tutorialSidebar: [
     {
       type: 'category',
-      label: 'Denti-Pro安装总教程',
+      label: '主程序安装',
       items: [
-        'Denti-Pro安装总教程/main-program-installation-guide',
+        'install/index',
       ],
       collapsed: true,
     },
     {
       type: 'category',
-      label: 'Denti-Pro更新日志',
+      label: 'Denti-Pro 更新日志',
       items: [
+        'changelog/index',
       {
         type: 'category',
         label: '2026年',
         items: [
-          'Denti-Pro更新日志/2026/2026-03',
-          'Denti-Pro更新日志/2026/2026-04',
+          'changelog/2026/2026-04',
+          'changelog/2026/2026-03',
         ],
         collapsed: true,
       },
@@ -25,8 +26,8 @@ const sidebars = {
         type: 'category',
         label: '2025年',
         items: [
-          'Denti-Pro更新日志/2025/2025-01',
-          'Denti-Pro更新日志/2025/2025-02',
+          'changelog/2025/2025-02',
+          'changelog/2025/2025-01',
         ],
         collapsed: true,
       },
@@ -35,10 +36,10 @@ const sidebars = {
     },
     {
       type: 'category',
-      label: 'Denti-Pro云更新服务说明',
+      label: '云更新服务说明',
       items: [
-        'Denti-Pro云更新服务说明/cloud-update-service-registration-guide',
-        'Denti-Pro云更新服务说明/special-registration-rules',
+        'cloud/registration',
+        'cloud/special',
       ],
       collapsed: true,
     },

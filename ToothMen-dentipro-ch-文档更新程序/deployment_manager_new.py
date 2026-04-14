@@ -425,7 +425,10 @@ class DeploymentManager:
             nav_items = []
             
             # 检测安装教程文件夹
-            installation_folders = [f for f in folders if "安装" in f or "installation" in f.lower()]
+            installation_folders = [
+                f for f in folders
+                if "安装" in f or "installation" in f.lower() or f.lower() == "install"
+            ]
             if installation_folders:
                 installation_folder = installation_folders[0]
                 # 查找安装教程的主文档
@@ -444,6 +447,8 @@ class DeploymentManager:
                 changelog_folder = changelog_folders[0]
                 # 优先查找总览页面 (changelog-index)
                 changelog_index_path = self.docs_folder / changelog_folder / "index.md"
+                if not changelog_index_path.exists():
+                    changelog_index_path = self.docs_folder / changelog_folder / "index.mdx"
                 if changelog_index_path.exists():
                     # 读取index.md文件获取文档ID
                     try:
@@ -560,16 +565,23 @@ class DeploymentManager:
         if not folder_path.exists():
             return None
         
-        # 查找文件夹中的第一个MDX/MD文件
-        for file_item in folder_path.iterdir():
-            if file_item.is_file() and (file_item.name.endswith('.mdx') or file_item.name.endswith('.md')):
-                doc_id = self.get_doc_id_from_mdx(file_item)
-                if doc_id:
-                    return doc_id
-                else:
-                    # 如果没有文档ID，生成一个
-                    clean_name = self.clean_name(file_item.name)
-                    return f"{folder_name}/{clean_name}"
+        # 优先 index.md / index.mdx，再按名称排序，保证 install/ 等目录主文档稳定
+        candidates = [
+            p for p in folder_path.iterdir()
+            if p.is_file() and (p.name.endswith('.mdx') or p.name.endswith('.md'))
+        ]
+        def _main_doc_sort_key(p: Path) -> tuple:
+            n = p.name.lower()
+            if n == 'index.mdx' or n == 'index.md':
+                return (0, n)
+            return (1, n)
+        candidates.sort(key=_main_doc_sort_key)
+        for file_item in candidates:
+            doc_id = self.get_doc_id_from_mdx(file_item)
+            if doc_id:
+                return doc_id
+            clean_name = self.clean_name(file_item.name)
+            return f"{folder_name}/{clean_name}"
         
         return None
     
@@ -910,6 +922,7 @@ class DeploymentManager:
         
         # 读取排序配置文件
         sort_config_path = self.sort_config_path
+        self.sort_config = {}
         
         # 获取文件夹列表（按配置或按字母顺序）
         folders = []
@@ -917,6 +930,7 @@ class DeploymentManager:
             try:
                 with open(sort_config_path, 'r', encoding='utf-8') as f:
                     sort_config = json.load(f)
+                self.sort_config = sort_config
                 folders = sort_config.get("folders", [])
                 print(f"从配置文件读取文件夹: {folders}")
             except Exception as e:

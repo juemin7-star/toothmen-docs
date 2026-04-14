@@ -1,28 +1,29 @@
 {
   "folders": [
-    "Denti-Pro安装总教程",
-    "Denti-Pro更新日志",
-    "Denti-Pro云更新服务说明"
+    "install",
+    "changelog",
+    "cloud"
   ],
   "files": {
-    "Denti-Pro安装总教程": [
-      "主程序安装教程"
+    "install": [
+      "index"
     ],
-    "Denti-Pro更新日志/2026": [
+    "changelog/2026": [
       "2026-04",
       "2026-03"
     ],
-    "Denti-Pro更新日志/2025": [
+    "changelog/2025": [
       "2025-02",
       "2025-01"
     ],
-    "Denti-Pro更新日志": [
+    "changelog": [
+      "index",
       "2026",
       "2025"
     ],
-    "Denti-Pro云更新服务说明": [
-      "注册说明",
-      "特殊补充"
+    "cloud": [
+      "registration",
+      "special"
     ]
   }
 }
