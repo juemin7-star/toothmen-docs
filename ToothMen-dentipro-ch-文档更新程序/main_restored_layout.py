@@ -367,8 +367,63 @@ module.exports = config;"""
         # 刷新文件夹结构
         self.refresh_folder_structure()
         
+        # 启动docs递归监控（自动检测所有子文件夹变化）
+        self.start_recursive_docs_monitoring()
+        
         # 记录日志
         self.log("✅ 程序初始化完成", "success")
+    
+    def start_recursive_docs_monitoring(self):
+        """启动docs目录递归监控"""
+        try:
+            self._docs_snapshot = self._build_docs_snapshot()
+            self._docs_monitor_interval_ms = 2000  # 2秒轮询一次
+            self.root.after(self._docs_monitor_interval_ms, self.check_recursive_docs_changes)
+            self.log("👀 已启动docs递归监控（含所有子文件夹）", "info")
+        except Exception as e:
+            self.log(f"⚠️  启动docs递归监控失败: {str(e)}", "warning")
+    
+    def _build_docs_snapshot(self):
+        """
+        构建docs目录递归快照
+        仅跟踪目录与文档文件（.md/.mdx），用于检测结构和内容变化
+        """
+        snapshot = {}
+        if not self.docs_folder.exists():
+            return snapshot
+        
+        for path in self.docs_folder.rglob("*"):
+            try:
+                if path.is_dir():
+                    rel = str(path.relative_to(self.docs_folder)).replace("\\", "/")
+                    snapshot[f"dir:{rel}"] = path.stat().st_mtime
+                elif path.is_file() and (path.suffix.lower() in {".md", ".mdx"}):
+                    rel = str(path.relative_to(self.docs_folder)).replace("\\", "/")
+                    stat = path.stat()
+                    snapshot[f"file:{rel}"] = (stat.st_mtime, stat.st_size)
+            except FileNotFoundError:
+                # 轮询过程中路径可能被删除，忽略即可
+                continue
+            except PermissionError:
+                continue
+        
+        return snapshot
+    
+    def check_recursive_docs_changes(self):
+        """递归检测docs目录变化，变化后自动刷新树结构"""
+        try:
+            current_snapshot = self._build_docs_snapshot()
+            if not hasattr(self, "_docs_snapshot"):
+                self._docs_snapshot = current_snapshot
+            elif current_snapshot != self._docs_snapshot:
+                self._docs_snapshot = current_snapshot
+                self.refresh_folder_structure()
+                self.log("🔄 检测到docs子目录变化，已自动刷新", "info")
+        except Exception as e:
+            self.log(f"⚠️  docs递归监控异常: {str(e)}", "warning")
+        finally:
+            interval = getattr(self, "_docs_monitor_interval_ms", 2000)
+            self.root.after(interval, self.check_recursive_docs_changes)
     
     def show_init_error(self, error_msg):
         """显示初始化错误"""
@@ -686,64 +741,102 @@ module.exports = config;"""
             for folder_name in display_folders:
                 folder_path = self.docs_folder / folder_name
                 
-                # 获取文件夹内的文件
-                mdx_files = []
-                for file in folder_path.glob("*.mdx"):
-                    mdx_files.append(file.name)
-                for file in folder_path.glob("*.md"):
-                    mdx_files.append(file.name)
+                # 获取文件夹内的直接文件和子文件夹
+                direct_files = []
+                child_folders = []
+                for entry in folder_path.iterdir():
+                    if entry.is_file() and (entry.name.endswith('.mdx') or entry.name.endswith('.md')):
+                        direct_files.append(entry.name)
+                    elif entry.is_dir():
+                        # 仅显示包含MDX/MD文件的子文件夹（如 2025/2026）
+                        has_docs = any(
+                            sub.is_file() and (sub.name.endswith('.mdx') or sub.name.endswith('.md'))
+                            for sub in entry.iterdir()
+                        )
+                        if has_docs:
+                            child_folders.append(entry.name)
                 
-                # 按照排序配置文件中的顺序显示文件
-                sorted_files = []
+                # 按照排序配置文件中的顺序显示子项（子文件夹 + 文件）
+                sorted_items = []
                 if sort_config_path.exists():
                     # 获取配置文件中的文件顺序
                     config_files = sort_config.get("files", {}).get(folder_name, [])
                     
-                    # 先添加配置文件指定的文件
-                    for file_name in config_files:
-                        # 检查文件是否存在（尝试不同的扩展名）
-                        possible_files = [
-                            f"{file_name}.mdx",
-                            f"{file_name}.md",
-                            file_name  # 可能已经包含扩展名
-                        ]
+                    # 先添加配置文件指定的子项（优先子文件夹，其次文件）
+                    for item_name in config_files:
+                        item_path = folder_path / item_name
+                        if item_path.exists() and item_path.is_dir() and item_name in child_folders:
+                            sorted_items.append(item_name)
+                            continue
                         
+                        possible_files = [f"{item_name}.mdx", f"{item_name}.md", item_name]
                         for possible_file in possible_files:
-                            if (folder_path / possible_file).exists():
-                                sorted_files.append(possible_file)
+                            file_path = folder_path / possible_file
+                            if file_path.exists() and file_path.is_file():
+                                sorted_items.append(possible_file)
                                 break
                     
-                    # 再添加其他文件（按字母顺序）
-                    for file_name in sorted(mdx_files):
-                        # 去掉扩展名进行比较
-                        file_base = file_name
-                        if file_name.endswith('.mdx'):
-                            file_base = file_name[:-4]
-                        elif file_name.endswith('.md'):
-                            file_base = file_name[:-3]
-                        
-                        if file_base not in [f.split('.')[0] for f in sorted_files]:
-                            sorted_files.append(file_name)
+                    # 再添加未配置的子文件夹
+                    for subfolder_name in sorted(child_folders):
+                        if subfolder_name not in sorted_items:
+                            sorted_items.append(subfolder_name)
+                    
+                    # 再添加未配置的文件
+                    for file_name in sorted(direct_files):
+                        if file_name not in sorted_items:
+                            sorted_items.append(file_name)
                 else:
-                    # 没有配置文件，按字母顺序显示
-                    sorted_files = sorted(mdx_files)
+                    # 没有配置文件，先子文件夹后文件
+                    sorted_items = sorted(child_folders) + sorted(direct_files)
                 
                 # 添加文件夹到树
-                folder_item = self.tree.insert("", "end", text=f"📂 {folder_name}/", values=("文件夹", str(len(sorted_files))))
+                folder_item = self.tree.insert("", "end", text=f"📂 {folder_name}/", values=("文件夹", str(len(sorted_items))))
                 
-                # 添加文件到树
-                for file_name in sorted_files:
-                    if file_name.endswith('.mdx'):
+                # 添加子项到树（支持子文件夹和文件）
+                for item_name in sorted_items:
+                    item_path = folder_path / item_name
+                    if item_path.exists() and item_path.is_dir():
+                        # 子文件夹节点
+                        subfolder_item = self.tree.insert(
+                            folder_item, "end", text=f"📂 {item_name}/", values=("子文件夹", "")
+                        )
+                        # 显示子文件夹内文档（用于可视化确认与排序保存）
+                        sub_files = []
+                        for sub_file in item_path.iterdir():
+                            if sub_file.is_file() and (sub_file.name.endswith('.mdx') or sub_file.name.endswith('.md')):
+                                sub_files.append(sub_file.name)
+                        
+                        # 子文件夹内文件顺序按 sort_config 的 folder/subfolder 键读取
+                        subfolder_key = f"{folder_name}/{item_name}"
+                        sorted_sub_files = []
+                        config_sub_files = sort_config.get("files", {}).get(subfolder_key, []) if sort_config_path.exists() else []
+                        for sub_file_base in config_sub_files:
+                            possible_sub_files = [f"{sub_file_base}.mdx", f"{sub_file_base}.md", sub_file_base]
+                            for psf in possible_sub_files:
+                                psf_path = item_path / psf
+                                if psf_path.exists() and psf_path.is_file():
+                                    sorted_sub_files.append(psf)
+                                    break
+                        for sub_file_name in sorted(sub_files):
+                            if sub_file_name not in sorted_sub_files:
+                                sorted_sub_files.append(sub_file_name)
+                        
+                        for sub_file_name in sorted_sub_files:
+                            if sub_file_name.endswith('.mdx'):
+                                icon = "📄"
+                                file_type = "MDX文件"
+                            else:
+                                icon = "📝"
+                                file_type = "MD文件"
+                            self.tree.insert(subfolder_item, "end", text=f"{icon} {sub_file_name}", values=(file_type, "1"))
+                    elif item_name.endswith('.mdx'):
                         icon = "📄"
                         file_type = "MDX文件"
-                    elif file_name.endswith('.md'):
+                        self.tree.insert(folder_item, "end", text=f"{icon} {item_name}", values=(file_type, "1"))
+                    elif item_name.endswith('.md'):
                         icon = "📝"
                         file_type = "MD文件"
-                    else:
-                        icon = "📎"
-                        file_type = "其他文件"
-                    
-                    self.tree.insert(folder_item, "end", text=f"{icon} {file_name}", values=(file_type, "1"))
+                        self.tree.insert(folder_item, "end", text=f"{icon} {item_name}", values=(file_type, "1"))
             
             self.log(f"✅ 文件夹结构已刷新，共检测到 {total_folders} 个文件夹", "success")
             
@@ -1037,6 +1130,22 @@ module.exports = config;"""
                     self.log(f"❌ 添加更改失败: {output2}", "error")
                     return
                 
+                # 步骤2.5: 默认排除打包大文件，避免推送失败（仅取消暂存，不删除本地文件）
+                self.log("📋 步骤2.5: 排除dist/build大文件（默认策略）", "info")
+                skip_paths = [
+                    "ToothMen-dentipro-ch-文档更新程序/dist",
+                    "ToothMen-dentipro-ch-文档更新程序/build",
+                ]
+                for skip_path in skip_paths:
+                    success_skip, output_skip = self.deployment_manager.run_command(
+                        self.deployment_manager.git_path, ["reset", "HEAD", "--", skip_path]
+                    )
+                    if success_skip:
+                        self.log(f"✅ 已从本次提交排除: {skip_path}", "success")
+                    else:
+                        # 目录不存在或未跟踪时可能失败，不影响主流程
+                        self.log(f"ℹ️  跳过排除（可能无变更）: {skip_path}", "info")
+                
                 # 步骤3: 提交更改
                 self.log("📋 步骤3: 提交更改", "info")
                 commit_message = f"自动部署更新 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
@@ -1219,12 +1328,80 @@ module.exports = config;"""
                 if not push_success:
                     self.log("❌ 推送失败，已重试3次", "error")
                     self.log("ℹ️  可能的原因：", "info")
-                    self.log("  1. 网络连接问题", "info")
+                    self.log("  1. 网络连接问题（443端口被阻止）", "info")
                     self.log("  2. GitHub认证问题", "info")
                     self.log("  3. 仓库权限问题", "info")
+                    self.log("  4. 防火墙或代理设置问题", "info")
                     self.log("ℹ️  请手动执行以下命令测试：", "info")
                     self.log(f'  cd "{self.project_path}"', "info")
                     self.log('  git push origin master', "info")
+                    self.log("ℹ️  如果443端口被阻止，可以尝试：", "info")
+                    self.log("  1. 使用SSH方式: git remote set-url origin git@github.com:juemin7-star/toothmen-docs.git", "info")
+                    self.log("  2. 检查网络代理设置", "info")
+                    self.log("  3. 暂时关闭防火墙测试", "info")
+                    self.log("  4. 使用VPN或更换网络环境", "info")
+                    
+                    # 保存提交信息到文件，方便用户手动推送
+                    try:
+                        import json
+                        
+                        # 创建手动推送说明文件
+                        manual_push_file = self.project_path / "手动推送说明.txt"
+                        manual_content = f"""# 📋 手动推送说明
+
+## 🔧 问题描述
+自动推送失败，可能是网络连接问题（443端口被阻止）。
+
+## 📊 当前状态
+- 所有更改已添加到暂存区
+- 更改已提交到本地仓库
+- 提交信息: {commit_message}
+
+## 🎯 手动推送步骤
+
+### 方法1: 使用Git Bash手动推送
+1. 打开Git Bash
+2. 执行以下命令:
+   ```
+   cd "{self.project_path}"
+   git push origin master
+   ```
+
+### 方法2: 切换到SSH方式（如果HTTPS被阻止）
+1. 执行以下命令切换到SSH:
+   ```
+   git remote set-url origin git@github.com:juemin7-star/toothmen-docs.git
+   ```
+2. 然后推送:
+   ```
+   git push origin master
+   ```
+
+### 方法3: 使用GitHub Desktop
+1. 打开GitHub Desktop
+2. 选择此仓库: {self.project_path}
+3. 点击"Push origin"按钮
+
+## 🔍 网络诊断
+如果仍然失败，请检查:
+1. 网络连接是否正常
+2. 防火墙是否阻止了GitHub
+3. 是否使用了代理（需要配置Git代理）
+4. 尝试使用VPN
+
+## 📅 生成时间
+{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+"""
+                        
+                        with open(manual_push_file, "w", encoding="utf-8") as f:
+                            f.write(manual_content)
+                        
+                        self.log(f"📄 已生成手动推送说明文件: {manual_push_file}", "info")
+                        self.log("ℹ️  请按照文件中的说明手动完成推送", "info")
+                        
+                    except Exception as e:
+                        self.log(f"⚠️  无法生成手动推送说明文件: {str(e)}", "warning")
+                    
                     return
                 
                 self.log("=" * 60, "info")
@@ -1936,6 +2113,23 @@ module.exports = config;"""
                 self.set_button_state(btn, "disabled")
     
     # ========== 排序按钮方法 ==========
+    def _is_folder_item(self, item_id):
+        """判断树节点是否为文件夹节点。优先看类型列，图标仅做兜底。"""
+        item_values = self.tree.item(item_id, "values")
+        item_text = self.tree.item(item_id, "text")
+        item_type = item_values[0] if item_values else ""
+        return item_type == "文件夹" or item_text.startswith("📂")
+    
+    def _is_file_item(self, item_id):
+        """判断树节点是否为文件节点。优先看类型列，图标仅做兜底。"""
+        item_values = self.tree.item(item_id, "values")
+        item_text = self.tree.item(item_id, "text")
+        item_type = item_values[0] if item_values else ""
+        return (
+            item_type in ("MDX文件", "MD文件", "子文件夹")
+            or item_text.startswith("📄")
+            or item_text.startswith("📝")
+        )
     
     def on_tree_selection(self, event):
         """树选择事件，用于启用/禁用排序按钮"""
@@ -1953,14 +2147,14 @@ module.exports = config;"""
         item_text = self.tree.item(item_id, "text")
         
         # 根据选择的项目类型启用相应的按钮
-        if item_text.startswith("📁"):
+        if self._is_folder_item(item_id):
             # 选择了文件夹，启用文件夹排序按钮，禁用文件排序按钮
             self.set_button_state(self.btn_folder_up, "normal")
             self.set_button_state(self.btn_folder_down, "normal")
             self.set_button_state(self.btn_file_up, "disabled")
             self.set_button_state(self.btn_file_down, "disabled")
             self.set_button_state(self.btn_save_sort, "normal")
-        elif item_text.startswith("📄") or item_text.startswith("📝"):
+        elif self._is_file_item(item_id):
             # 选择了文件，启用文件排序按钮，禁用文件夹排序按钮
             self.set_button_state(self.btn_folder_up, "disabled")
             self.set_button_state(self.btn_folder_down, "disabled")
@@ -1986,8 +2180,8 @@ module.exports = config;"""
             item_id = selection[0]
             item_text = self.tree.item(item_id, "text")
             
-            if not item_text.startswith("📁"):
-                self.log("⚠️  请选择一个文件夹（📁 开头的项目）", "warning")
+            if not self._is_folder_item(item_id):
+                self.log("⚠️  请选择一个文件夹（📂 开头的项目）", "warning")
                 return
             
             # 获取父节点和兄弟节点
@@ -2016,8 +2210,8 @@ module.exports = config;"""
             item_id = selection[0]
             item_text = self.tree.item(item_id, "text")
             
-            if not item_text.startswith("📁"):
-                self.log("⚠️  请选择一个文件夹（📁 开头的项目）", "warning")
+            if not self._is_folder_item(item_id):
+                self.log("⚠️  请选择一个文件夹（📂 开头的项目）", "warning")
                 return
             
             # 获取父节点和兄弟节点
@@ -2046,8 +2240,8 @@ module.exports = config;"""
             item_id = selection[0]
             item_text = self.tree.item(item_id, "text")
             
-            if not (item_text.startswith("📄") or item_text.startswith("📝")):
-                self.log("⚠️  请选择一个文件（📄 或 📝 开头的项目）", "warning")
+            if not self._is_file_item(item_id):
+                self.log("⚠️  请选择可排序子项（📂 子文件夹 / 📄 / 📝）", "warning")
                 return
             
             # 获取父节点和兄弟节点
@@ -2076,8 +2270,8 @@ module.exports = config;"""
             item_id = selection[0]
             item_text = self.tree.item(item_id, "text")
             
-            if not (item_text.startswith("📄") or item_text.startswith("📝")):
-                self.log("⚠️  请选择一个文件（📄 或 📝 开头的项目）", "warning")
+            if not self._is_file_item(item_id):
+                self.log("⚠️  请选择可排序子项（📂 子文件夹 / 📄 / 📝）", "warning")
                 return
             
             # 获取父节点和兄弟节点
@@ -2116,7 +2310,7 @@ module.exports = config;"""
             # 保存文件夹顺序
             for item_id in root_items:
                 item_text = self.tree.item(item_id, "text")
-                if item_text.startswith("📁"):
+                if self._is_folder_item(item_id):
                     # 提取文件夹名称（去掉图标和斜杠）
                     folder_name = item_text.replace("📂 ", "").replace("/", "")
                     sort_config["folders"].append(folder_name)
@@ -2126,38 +2320,30 @@ module.exports = config;"""
                     file_names = []
                     for file_id in file_items:
                         file_text = self.tree.item(file_id, "text")
-                        if file_text.startswith("📄") or file_text.startswith("📝"):
-                            # 提取文件名（去掉图标）
-                            file_name = file_text.split(" ", 1)[1]
-                            # 去掉扩展名
-                            if file_name.endswith('.mdx'):
-                                file_name = file_name[:-4]
-                            elif file_name.endswith('.md'):
-                                file_name = file_name[:-3]
-                            file_names.append(file_name)
-                    
-                    if file_names:
-                        sort_config["files"][folder_name] = file_names
-            
-            # 保存到文件
-            with open(sort_config_path, 'w', encoding='utf-8') as f:
-                json.dump(sort_config, f, indent=2, ensure_ascii=False)
-            
-            self.log("✅ 排序配置已保存", "success")
-            self.log(f"📁 文件夹顺序: {sort_config['folders']}", "info")
-            
-            # 显示保存的文件顺序
-            for folder, files in sort_config["files"].items():
-                self.log(f"   📂 {folder}: {files}", "info")
-                
-        except Exception as e:
-            self.log(f"❌ 保存排序配置失败: {str(e)}", "error")
-
-def main():
-    """主函数"""
-    root = tk.Tk()
-    app = ToothMenDocsManager(root)
-    root.mainloop()
-
-if __name__ == "__main__":
-    main()
+                        if self._is_file_item(file_id):
+                            item_name = file_text.split(" ", 1)[1].rstrip("/")
+                            # 子文件夹：原样保存（如 2025）
+                            if self.tree.item(file_id, "values")[0] == "子文件夹":
+                                file_names.append(item_name)
+                                
+                                # 同时保存子文件夹内文件顺序到 folder/subfolder 键
+                                sub_key = f"{folder_name}/{item_name}"
+                                sub_children = self.tree.get_children(file_id)
+                                sub_names = []
+                                for sub_id in sub_children:
+                                    if self._is_file_item(sub_id):
+                                        sub_text = self.tree.item(sub_id, "text")
+                                        sub_name = sub_text.split(" ", 1)[1]
+                                        if sub_name.endswith('.mdx'):
+                                            sub_name = sub_name[:-4]
+                                        elif sub_name.endswith('.md'):
+                                            sub_name = sub_name[:-3]
+                                        sub_names.append(sub_name)
+                                if sub_names:
+                                    sort_config["files"][sub_key] = sub_names
+                            else:
+                                # 文件：去扩展名后保存
+                                if item_name.endswith('.mdx'):
+                                    item_name = item_name[:-4]
+                                elif item_name.endswith('.md'):
+                            
