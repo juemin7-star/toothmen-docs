@@ -1001,25 +1001,71 @@ module.exports = config;"""
                     self.log(f"❌ 提交更改失败: {output3}", "error")
                     return
                 
-                # 步骤4: 推送到远程仓库
+                # 步骤4: 推送到远程仓库（带重试机制）
                 self.log("📋 步骤4: 推送到远程仓库", "info")
-                # 先尝试推送到master分支（你的仓库使用master分支）
-                success4, output4 = self.deployment_manager.run_command(
-                    self.deployment_manager.git_path, ["push", "origin", "master"]
-                )
-                if success4:
-                    self.log("✅ 已推送到远程仓库 (master分支)", "success")
-                else:
-                    # 如果master分支失败，尝试main分支
-                    self.log("⚠️  master分支推送失败，尝试main分支...", "warning")
-                    success5, output5 = self.deployment_manager.run_command(
-                        self.deployment_manager.git_path, ["push", "origin", "main"]
+                
+                # 先检查网络连接
+                self.log("🔍 检查网络连接...", "info")
+                import socket
+                try:
+                    socket.create_connection(("github.com", 443), timeout=5)
+                    self.log("✅ 网络连接正常", "success")
+                except Exception as e:
+                    self.log(f"❌ 网络连接失败: {str(e)}", "error")
+                    self.log("ℹ️  请检查网络连接后重试", "info")
+                    return
+                
+                # 尝试推送（最多重试3次）
+                max_retries = 3
+                push_success = False
+                push_output = ""
+                
+                for attempt in range(max_retries):
+                    if attempt > 0:
+                        self.log(f"🔄 第{attempt+1}次重试推送...", "info")
+                        import time
+                        time.sleep(2)  # 等待2秒后重试
+                    
+                    # 先尝试推送到master分支
+                    success_master, output_master = self.deployment_manager.run_command(
+                        self.deployment_manager.git_path, ["push", "origin", "master"]
                     )
-                    if success5:
-                        self.log("✅ 已推送到远程仓库 (main分支)", "success")
+                    
+                    if success_master:
+                        self.log("✅ 已推送到远程仓库 (master分支)", "success")
+                        push_success = True
+                        push_output = output_master
+                        break
                     else:
-                        self.log(f"❌ 推送失败: {output5}", "error")
-                        return
+                        # 检查是否是网络错误
+                        if "unable to access" in output_master or "Connection" in output_master:
+                            self.log(f"⚠️  网络连接问题 (尝试 {attempt+1}/{max_retries}): {output_master[:100]}...", "warning")
+                            continue
+                        else:
+                            # 如果不是网络错误，尝试main分支
+                            self.log("⚠️  master分支推送失败，尝试main分支...", "warning")
+                            success_main, output_main = self.deployment_manager.run_command(
+                                self.deployment_manager.git_path, ["push", "origin", "main"]
+                            )
+                            
+                            if success_main:
+                                self.log("✅ 已推送到远程仓库 (main分支)", "success")
+                                push_success = True
+                                push_output = output_main
+                                break
+                            else:
+                                self.log(f"❌ 推送失败 (尝试 {attempt+1}/{max_retries}): {output_main[:100]}...", "error")
+                
+                if not push_success:
+                    self.log("❌ 推送失败，已重试3次", "error")
+                    self.log("ℹ️  可能的原因：", "info")
+                    self.log("  1. 网络连接问题", "info")
+                    self.log("  2. GitHub认证问题", "info")
+                    self.log("  3. 仓库权限问题", "info")
+                    self.log("ℹ️  请手动执行以下命令测试：", "info")
+                    self.log(f'  cd "{self.project_path}"', "info")
+                    self.log('  git push origin master', "info")
+                    return
                 
                 self.log("=" * 60, "info")
                 self.log("🎉 在线部署完成！", "success")
