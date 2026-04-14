@@ -1037,12 +1037,45 @@ module.exports = config;"""
                         push_output = output_master
                         break
                     else:
-                        # 检查是否是网络错误
-                        if "unable to access" in output_master or "Connection" in output_master:
+                        # 检查错误类型
+                        error_lower = output_master.lower()
+                        
+                        # 1. SSH主机密钥验证失败
+                        if "host key verification failed" in error_lower:
+                            self.log(f"🔑 SSH主机密钥验证失败 (尝试 {attempt+1}/{max_retries})", "warning")
+                            self.log("ℹ️  正在尝试修复SSH主机密钥...", "info")
+                            
+                            # 尝试清除SSH已知主机
+                            try:
+                                import subprocess
+                                # 清除github.com的SSH主机密钥
+                                subprocess.run(["ssh-keygen", "-R", "github.com"], 
+                                             capture_output=True, text=True, shell=True)
+                                self.log("✅ 已清除SSH主机密钥", "success")
+                            except Exception as e:
+                                self.log(f"⚠️  无法清除SSH主机密钥: {str(e)}", "warning")
+                            
+                            # 尝试切换到HTTPS方式
+                            self.log("ℹ️  正在切换到HTTPS方式...", "info")
+                            success_https, output_https = self.deployment_manager.run_command(
+                                self.deployment_manager.git_path,
+                                ["remote", "set-url", "origin", "https://github.com/juemin7-star/toothmen-docs.git"]
+                            )
+                            
+                            if success_https:
+                                self.log("✅ 已切换到HTTPS方式", "success")
+                                # 重新尝试推送
+                                continue
+                            else:
+                                self.log(f"❌ 切换到HTTPS失败: {output_https}", "error")
+                        
+                        # 2. 网络连接问题
+                        elif "unable to access" in error_lower or "connection" in error_lower:
                             self.log(f"⚠️  网络连接问题 (尝试 {attempt+1}/{max_retries}): {output_master[:100]}...", "warning")
                             continue
+                        
+                        # 3. 其他错误，尝试main分支
                         else:
-                            # 如果不是网络错误，尝试main分支
                             self.log("⚠️  master分支推送失败，尝试main分支...", "warning")
                             success_main, output_main = self.deployment_manager.run_command(
                                 self.deployment_manager.git_path, ["push", "origin", "main"]
@@ -1430,8 +1463,20 @@ module.exports = config;"""
                 else:
                     self.log(f"❌ Git推送失败: {output_push}", "error")
                     
-                    # 如果master分支失败，尝试main分支
-                    if "src refspec main does not match any" in output_push:
+                    # 检查错误类型
+                    error_lower = output_push.lower()
+                    
+                    # 1. SSH主机密钥验证失败
+                    if "host key verification failed" in error_lower:
+                        self.log("🔑 SSH主机密钥验证失败", "warning")
+                        self.log("ℹ️  解决方案:", "info")
+                        self.log("  1. 清除SSH主机密钥: ssh-keygen -R github.com", "info")
+                        self.log("  2. 切换到HTTPS方式:", "info")
+                        self.log("     git remote set-url origin https://github.com/juemin7-star/toothmen-docs.git", "info")
+                        self.log("  3. 使用'切换到SSH'按钮修复SSH连接", "info")
+                    
+                    # 2. 如果master分支失败，尝试main分支
+                    elif "src refspec main does not match any" in output_push:
                         self.log("⚠️  master分支推送失败，尝试main分支...", "warning")
                         success_main, output_main = self.deployment_manager.run_command(
                             self.deployment_manager.git_path,
@@ -1442,6 +1487,10 @@ module.exports = config;"""
                             self.log("✅ 已推送到远程仓库 (main分支)", "success")
                         else:
                             self.log(f"❌ main分支推送失败: {output_main}", "error")
+                    
+                    # 3. 其他错误
+                    else:
+                        self.log("ℹ️  请检查Git配置和网络连接", "info")
                     
             except Exception as e:
                 self.log(f"❌ Git推送异常: {str(e)}", "error")

@@ -1,0 +1,160 @@
+# SSH主机密钥验证失败修复说明
+
+## 🔍 **问题诊断**
+
+从你的日志中可以看到错误：
+```
+Host key verification failed.
+fatal: Could not read from remote repository.
+```
+
+## 🚨 **问题原因**
+
+**SSH主机密钥验证失败**！这是因为：
+1. Git尝试使用SSH连接GitHub
+2. SSH主机密钥验证失败（可能是密钥被更改或损坏）
+3. Git无法建立安全的SSH连接
+
+## 🔧 **解决方案**
+
+### 方案1：**清除SSH已知主机密钥（推荐）**
+```bash
+# 清除GitHub的SSH主机密钥
+ssh-keygen -R github.com
+
+# 或者删除整个known_hosts文件
+del "%USERPROFILE%\.ssh\known_hosts"
+```
+
+### 方案2：**切换到HTTPS方式（最简单）**
+```bash
+# 切换到HTTPS远程仓库
+git remote set-url origin https://github.com/juemin7-star/toothmen-docs.git
+```
+
+### 方案3：**手动接受SSH主机密钥**
+```bash
+# 手动连接一次，接受主机密钥
+ssh -T git@github.com
+# 输入 yes 接受密钥
+```
+
+## 📝 **新版本程序功能**
+
+### ✅ **自动检测和修复SSH主机密钥问题**
+新版本的程序会自动：
+1. 检测SSH主机密钥验证失败错误
+2. 尝试清除SSH已知主机密钥
+3. 自动切换到HTTPS方式
+4. 提供详细的错误信息和解决方案
+
+### ✅ **智能错误处理**
+- 检测错误类型：SSH主机密钥验证失败、网络连接问题、分支名称问题
+- 针对不同错误类型采取不同的修复策略
+- 最多重试3次，每次重试间隔2秒
+
+### ✅ **详细的错误指导**
+当SSH主机密钥验证失败时，程序会显示：
+```
+🔑 SSH主机密钥验证失败
+ℹ️  解决方案:
+  1. 清除SSH主机密钥: ssh-keygen -R github.com
+  2. 切换到HTTPS方式:
+     git remote set-url origin https://github.com/juemin7-star/toothmen-docs.git
+  3. 使用'切换到SSH'按钮修复SSH连接
+```
+
+## 🛠️ **手动修复步骤**
+
+### 步骤1：打开命令提示符
+按 `Win + R`，输入 `cmd`，按回车
+
+### 步骤2：执行修复命令
+```bash
+# 切换到项目目录
+cd /d "D:\magicdental开发备忘录\toothmen-官方说明文档系统\ToothMen-Docs-Simple"
+
+# 清除SSH主机密钥
+ssh-keygen -R github.com
+
+# 或者切换到HTTPS方式
+git remote set-url origin https://github.com/juemin7-star/toothmen-docs.git
+```
+
+### 步骤3：测试连接
+```bash
+# 测试SSH连接
+ssh -T git@github.com
+
+# 或者测试HTTPS连接
+git remote -v
+```
+
+## 📊 **你的当前状态**
+
+### ✅ **已完成**
+- ✅ 本地构建测试成功
+- ✅ 本地预览服务器启动成功
+- ✅ Git提交完成
+- ✅ 网络连接正常
+
+### 🔧 **需要修复**
+- ❌ Git推送失败（SSH主机密钥验证失败）
+
+### ⏳ **等待中**
+- ⏳ GitHub Pages部署（修复Git推送后）
+
+## 🚀 **下一步操作**
+
+### 1. **使用新版本程序**
+新版本程序会自动尝试修复SSH主机密钥问题。
+
+### 2. **手动执行修复命令**
+如果程序自动修复失败，请手动执行：
+```bash
+ssh-keygen -R github.com
+git remote set-url origin https://github.com/juemin7-star/toothmen-docs.git
+```
+
+### 3. **重新尝试在线部署**
+修复SSH问题后，重新点击"在线部署"按钮。
+
+## 🔄 **程序自动修复流程**
+
+新版本程序遇到SSH主机密钥验证失败时：
+
+1. **检测错误**：识别"Host key verification failed"错误
+2. **清除SSH密钥**：尝试清除github.com的SSH主机密钥
+3. **切换到HTTPS**：自动将远程仓库URL切换到HTTPS方式
+4. **重新尝试推送**：使用HTTPS方式重新尝试推送
+5. **提供手动方案**：如果自动修复失败，提供手动修复步骤
+
+## 📍 **程序位置**
+
+```
+D:\magicdental开发备忘录\toothmen-官方说明文档系统\ToothMen-Docs-Simple\ToothMen-dentipro-ch-文档更新程序\dist\
+```
+
+**推荐使用**：`ToothMenDocsManager_restored` 文件夹中的程序
+
+## 📞 **如果仍然失败**
+
+如果所有方法都失败，请：
+
+1. **检查网络连接**：确保可以访问GitHub
+2. **检查Git配置**：运行 `git config --list`
+3. **检查远程仓库**：运行 `git remote -v`
+4. **检查SSH密钥**：运行 `ssh -T git@github.com`
+
+或者使用调试工具中的"测试网络连接"和"检查Git状态"功能。
+
+## 🎯 **总结**
+
+**SSH主机密钥验证失败**是一个常见问题，通常是由于SSH密钥被更改或损坏导致的。
+
+**最简单的解决方案**是切换到HTTPS方式：
+```bash
+git remote set-url origin https://github.com/juemin7-star/toothmen-docs.git
+```
+
+新版本程序会自动尝试这个解决方案，并为你提供详细的错误信息和修复指导。
