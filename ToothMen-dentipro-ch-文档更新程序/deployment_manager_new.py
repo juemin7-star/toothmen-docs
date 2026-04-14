@@ -1295,6 +1295,7 @@ class DeploymentManager:
             import subprocess
             import sys
             import urllib.request
+            import os
             
             def is_port_open(port=3000, timeout=1):
                 # 同时检测 localhost 与 127.0.0.1，避免主机解析差异导致误判
@@ -1318,9 +1319,74 @@ class DeploymentManager:
                         return 200 <= int(resp.status) < 500
                 except Exception:
                     return False
+
+            def get_listening_pids(port):
+                """获取占用指定端口的监听进程PID列表（Windows）"""
+                try:
+                    result = subprocess.run(
+                        ["netstat", "-ano", "-p", "tcp"],
+                        capture_output=True,
+                        text=True,
+                        encoding="utf-8",
+                        errors="ignore",
+                        shell=False,
+                        creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
+                    )
+                    if result.returncode != 0:
+                        return []
+
+                    pids = set()
+                    needle = f":{port}"
+                    for line in result.stdout.splitlines():
+                        line = line.strip()
+                        if "LISTENING" not in line or needle not in line:
+                            continue
+                        parts = line.split()
+                        if not parts:
+                            continue
+                        pid_text = parts[-1]
+                        if pid_text.isdigit():
+                            pids.add(int(pid_text))
+                    return sorted(pids)
+                except Exception:
+                    return []
+
+            def force_release_port(port):
+                """强制释放端口：结束占用该端口的进程"""
+                pids = get_listening_pids(port)
+                if not pids:
+                    return True, f"端口{port}未占用"
+
+                current_pid = os.getpid()
+                killed = []
+                failed = []
+                for pid in pids:
+                    if pid == current_pid:
+                        failed.append(f"{pid}(当前程序)")
+                        continue
+
+                    result = subprocess.run(
+                        ["taskkill", "/PID", str(pid), "/T", "/F"],
+                        capture_output=True,
+                        text=True,
+                        encoding="utf-8",
+                        errors="ignore",
+                        shell=False,
+                        creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
+                    )
+                    if result.returncode == 0:
+                        killed.append(str(pid))
+                    else:
+                        failed.append(str(pid))
+
+                # 给系统一点时间释放端口
+                time.sleep(0.6)
+                if is_port_open(port):
+                    return False, f"端口{port}释放失败，已尝试结束PID: {', '.join(killed) or '无'}，失败PID: {', '.join(failed) or '无'}"
+                return True, f"端口{port}已释放，结束PID: {', '.join(killed) or '无'}"
             
-            # 优先端口：3000，不可用则自动切到3001/3002
-            candidate_ports = [3000, 3001, 3002]
+            # 优先端口：3000-3002；若被占用则自动尝试3100-3102
+            candidate_ports = [3000, 3001, 3002, 3100, 3101, 3102]
             
             # 非强制刷新模式：若已有可访问服务，直接复用
             if not prefer_fresh:
@@ -1340,11 +1406,23 @@ class DeploymentManager:
                 creationflags = 0
             
             launch_errors = []
+
+            # 强制新预览模式：先尝试自动清理占用端口
+            if prefer_fresh:
+                for p in candidate_ports:
+                    if is_port_open(p):
+                        released, release_msg = force_release_port(p)
+                        if not released:
+                            # 无法清理但HTTP可访问时，直接复用，避免流程卡死
+                            if is_http_accessible(p):
+                                self.preview_url = f"http://localhost:{p}"
+                                return True, f"{release_msg}；已复用现有预览服务：{self.preview_url}"
+                            launch_errors.append(release_msg)
             
             for port in candidate_ports:
-                # 强制刷新模式：端口已占用时跳过，避免复用旧服务
+                # 强制刷新模式：端口仍被占用时跳过
                 if prefer_fresh and is_port_open(port):
-                    launch_errors.append(f"端口{port}已占用（强制新预览模式，已跳过）")
+                    launch_errors.append(f"端口{port}仍被占用（强制新预览模式，已跳过）")
                     continue
                 
                 # 端口被占用但HTTP不可达，直接跳过该端口
@@ -1404,7 +1482,7 @@ class DeploymentManager:
                         launch_errors.append(f"{' '.join(cmd)} -> 启动超时，端口{port}未就绪")
             
             details = "；".join(launch_errors) if launch_errors else "未知原因"
-            return False, f"本地预览启动失败，3000/3001/3002端口均不可用。详情: {details}"
+            return False, f"本地预览启动失败，3000/3001/3002/3100/3101/3102端口均不可用。详情: {details}"
             
         except Exception as e:
             return False, f"本地预览异常: {str(e)}"

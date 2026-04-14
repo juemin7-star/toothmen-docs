@@ -49,10 +49,10 @@ const config = {
     ({
       // 替换为你的项目社交链接
       navbar: {
-        title: 'ToothMen文档',
+        title: 'ToothMen-DentiPro',
         logo: {
           alt: 'ToothMen Logo',
-          src: 'img/logo.svg',
+          src: 'img/toothmenlogo.png',
         },
         items: [          {
             type: 'doc',

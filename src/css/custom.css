@@ -28,3 +28,24 @@
   --ifm-color-primary-lightest: #4fddbf;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
 }
+
+/* Keep the brand text/logo as display-only (no navigation) */
+.navbar__brand {
+  pointer-events: none;
+  cursor: default;
+  color: inherit;
+  text-decoration: none;
+  transition: none;
+}
+
+.navbar__brand:hover,
+.navbar__brand:focus,
+.navbar__brand:active {
+  color: inherit;
+  text-decoration: none;
+}
+
+.navbar__brand .navbar__title {
+  color: inherit;
+  text-decoration: none;
+}
