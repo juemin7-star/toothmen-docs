@@ -1227,130 +1227,104 @@ module.exports = config;"""
                     self.log("ℹ️  可能是Git配置问题或网络限制", "info")
                     # 继续尝试，但记录警告
                 
-                # 尝试推送（最多重试3次）
-                max_retries = 3
+                # 推送策略：HTTPS优先，SSH仅兜底
                 push_success = False
                 push_output = ""
+                push_error = ""
+                https_url = "https://github.com/juemin7-star/toothmen-docs.git"
+                ssh_url = "git@github.com:juemin7-star/toothmen-docs.git"
                 
-                for attempt in range(max_retries):
+                # 先确保远程使用HTTPS（更适配当前网络环境）
+                self.log("🌐 推送策略：HTTPS优先，SSH兜底", "info")
+                success_set_https, output_set_https = self.deployment_manager.run_command(
+                    self.deployment_manager.git_path, ["remote", "set-url", "origin", https_url]
+                )
+                if success_set_https:
+                    self.log("✅ 已切换远程为HTTPS", "success")
+                else:
+                    self.log(f"⚠️  切换HTTPS失败，继续尝试推送: {output_set_https}", "warning")
+                
+                # 阶段A：HTTPS推送（最多2次）
+                for attempt in range(2):
                     if attempt > 0:
-                        self.log(f"🔄 第{attempt+1}次重试推送...", "info")
+                        self.log(f"🔄 HTTPS第{attempt+1}次尝试推送...", "info")
                         import time
-                        time.sleep(2)  # 等待2秒后重试
+                        time.sleep(2)
                     
-                    # 先尝试推送到master分支
                     success_master, output_master = self.deployment_manager.run_command(
                         self.deployment_manager.git_path, ["push", "origin", "master"]
                     )
-                    
                     if success_master:
-                        self.log("✅ 已推送到远程仓库 (master分支)", "success")
+                        self.log("✅ 已通过HTTPS推送到远程仓库 (master分支)", "success")
                         push_success = True
                         push_output = output_master
                         break
+                    
+                    push_error = output_master
+                    error_lower = output_master.lower()
+                    if "src refspec master does not match any" in error_lower or "remote ref does not exist" in error_lower:
+                        self.log("⚠️  master分支推送失败，尝试main分支（HTTPS）...", "warning")
+                        success_main, output_main = self.deployment_manager.run_command(
+                            self.deployment_manager.git_path, ["push", "origin", "main"]
+                        )
+                        if success_main:
+                            self.log("✅ 已通过HTTPS推送到远程仓库 (main分支)", "success")
+                            push_success = True
+                            push_output = output_main
+                            break
+                        push_error = output_main
+                
+                # 阶段B：HTTPS失败则尝试SSH兜底（最多1次）
+                if not push_success:
+                    self.log("⚠️  HTTPS推送失败，尝试SSH兜底...", "warning")
+                    success_set_ssh, output_set_ssh = self.deployment_manager.run_command(
+                        self.deployment_manager.git_path, ["remote", "set-url", "origin", ssh_url]
+                    )
+                    if success_set_ssh:
+                        self.log("✅ 已切换远程为SSH", "success")
                     else:
-                        # 检查错误类型
-                        error_lower = output_master.lower()
-                        
-                        # 1. SSH主机密钥验证失败
-                        if "host key verification failed" in error_lower:
-                            self.log(f"🔑 SSH主机密钥验证失败 (尝试 {attempt+1}/{max_retries})", "warning")
-                            self.log("ℹ️  正在尝试修复SSH主机密钥...", "info")
-                            
-                            # 尝试清除SSH已知主机
-                            try:
-                                import subprocess
-                                # 清除github.com的SSH主机密钥
-                                subprocess.run(["ssh-keygen", "-R", "github.com"], 
-                                             capture_output=True, text=True, shell=True)
-                                self.log("✅ 已清除SSH主机密钥", "success")
-                            except Exception as e:
-                                self.log(f"⚠️  无法清除SSH主机密钥: {str(e)}", "warning")
-                            
-                            # 不要切换到HTTPS方式！坚持使用SSH
-                            self.log("ℹ️  坚持使用SSH方式（443端口可能被阻止）", "info")
-                            
-                            # 尝试手动接受SSH主机密钥
-                            try:
-                                import subprocess
-                                # 使用StrictHostKeyChecking=no强制接受主机密钥
-                                subprocess.run(["ssh", "-o", "StrictHostKeyChecking=no", "-T", "git@github.com"], 
-                                             capture_output=True, text=True, shell=True, timeout=10)
-                                self.log("✅ 已接受SSH主机密钥", "success")
-                            except Exception as e:
-                                self.log(f"⚠️  无法接受SSH主机密钥: {str(e)}", "warning")
-                            
-                            # 重新尝试SSH推送
-                            self.log("ℹ️  重新尝试SSH推送...", "info")
-                            continue
-                        
-                        # 2. 网络连接问题（特别是443端口连接失败）
-                        elif "unable to access" in error_lower or "connection" in error_lower or "port 443" in error_lower or "timed out" in error_lower:
-                            self.log(f"⚠️  网络连接问题 (尝试 {attempt+1}/{max_retries}): {output_master[:100]}...", "warning")
-                            
-                            # 分析具体错误
-                            if "port 443" in error_lower:
-                                self.log("🔍 错误分析: 443端口连接失败", "info")
-                                self.log("ℹ️  可能原因: 防火墙阻止、网络代理、SSL证书问题", "info")
-                                
-                                # 如果是第一次尝试，尝试切换到SSH方式
-                                if attempt == 0:
-                                    self.log("🔑 尝试切换到SSH方式...", "info")
-                                    success_ssh, output_ssh = self.deployment_manager.run_command(
-                                        self.deployment_manager.git_path,
-                                        ["remote", "set-url", "origin", "git@github.com:juemin7-star/toothmen-docs.git"]
-                                    )
-                                    
-                                    if success_ssh:
-                                        self.log("✅ 已切换到SSH方式", "success")
-                                        # 重新尝试推送
-                                        continue
-                                    else:
-                                        self.log(f"❌ 切换到SSH失败: {output_ssh}", "error")
-                            
-                            elif "timed out" in error_lower:
-                                self.log("🔍 错误分析: 连接超时", "info")
-                                self.log("ℹ️  可能原因: 网络不稳定、服务器响应慢、网络限制", "info")
-                                self.log("ℹ️  建议: 等待后重试或检查网络连接", "info")
-                            
-                            # 等待后重试
-                            import time
-                            wait_time = (attempt + 1) * 3  # 递增等待时间
-                            self.log(f"⏳ 等待 {wait_time} 秒后重试...", "info")
-                            time.sleep(wait_time)
-                            
-                            continue
-                        
-                        # 3. 其他错误，尝试main分支
-                        else:
-                            self.log("⚠️  master分支推送失败，尝试main分支...", "warning")
-                            success_main, output_main = self.deployment_manager.run_command(
+                        self.log(f"⚠️  切换SSH失败: {output_set_ssh}", "warning")
+                    
+                    success_master_ssh, output_master_ssh = self.deployment_manager.run_command(
+                        self.deployment_manager.git_path, ["push", "origin", "master"]
+                    )
+                    if success_master_ssh:
+                        self.log("✅ 已通过SSH推送到远程仓库 (master分支)", "success")
+                        push_success = True
+                        push_output = output_master_ssh
+                    else:
+                        push_error = output_master_ssh
+                        error_lower = output_master_ssh.lower()
+                        if "src refspec master does not match any" in error_lower or "remote ref does not exist" in error_lower:
+                            self.log("⚠️  master分支推送失败，尝试main分支（SSH）...", "warning")
+                            success_main_ssh, output_main_ssh = self.deployment_manager.run_command(
                                 self.deployment_manager.git_path, ["push", "origin", "main"]
                             )
-                            
-                            if success_main:
-                                self.log("✅ 已推送到远程仓库 (main分支)", "success")
+                            if success_main_ssh:
+                                self.log("✅ 已通过SSH推送到远程仓库 (main分支)", "success")
                                 push_success = True
-                                push_output = output_main
-                                break
+                                push_output = output_main_ssh
                             else:
-                                self.log(f"❌ 推送失败 (尝试 {attempt+1}/{max_retries}): {output_main[:100]}...", "error")
+                                push_error = output_main_ssh
                 
                 if not push_success:
-                    self.log("❌ 推送失败，已重试3次", "error")
+                    self.log("❌ 推送失败（HTTPS与SSH均未成功）", "error")
                     self.log("ℹ️  可能的原因：", "info")
-                    self.log("  1. 网络连接问题（443端口被阻止）", "info")
+                    self.log("  1. 网络连接问题（443/22端口受限）", "info")
                     self.log("  2. GitHub认证问题", "info")
                     self.log("  3. 仓库权限问题", "info")
                     self.log("  4. 防火墙或代理设置问题", "info")
                     self.log("ℹ️  请手动执行以下命令测试：", "info")
                     self.log(f'  cd "{self.project_path}"', "info")
+                    self.log('  git remote set-url origin https://github.com/juemin7-star/toothmen-docs.git', "info")
                     self.log('  git push origin master', "info")
-                    self.log("ℹ️  如果443端口被阻止，可以尝试：", "info")
+                    self.log("ℹ️  若HTTPS不通，再尝试SSH：", "info")
                     self.log("  1. 使用SSH方式: git remote set-url origin git@github.com:juemin7-star/toothmen-docs.git", "info")
                     self.log("  2. 检查网络代理设置", "info")
                     self.log("  3. 暂时关闭防火墙测试", "info")
                     self.log("  4. 使用VPN或更换网络环境", "info")
+                    if push_error:
+                        self.log(f"🔍 最后一次推送错误: {push_error[:300]}", "warning")
                     
                     # 保存提交信息到文件，方便用户手动推送
                     try:

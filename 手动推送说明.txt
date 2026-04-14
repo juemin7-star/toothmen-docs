@@ -1,0 +1,44 @@
+# 📋 手动推送说明
+
+## 🔧 问题描述
+自动推送失败，可能是网络连接问题（443端口被阻止）。
+
+## 📊 当前状态
+- 所有更改已添加到暂存区
+- 更改已提交到本地仓库
+- 提交信息: 自动部署更新 2026-04-14 19:08:24
+
+## 🎯 手动推送步骤
+
+### 方法1: 使用Git Bash手动推送
+1. 打开Git Bash
+2. 执行以下命令:
+   ```
+   cd "D:\magicdental开发备忘录\toothmen-官方说明文档系统\ToothMen-Docs-Simple"
+   git push origin master
+   ```
+
+### 方法2: 切换到SSH方式（如果HTTPS被阻止）
+1. 执行以下命令切换到SSH:
+   ```
+   git remote set-url origin git@github.com:juemin7-star/toothmen-docs.git
+   ```
+2. 然后推送:
+   ```
+   git push origin master
+   ```
+
+### 方法3: 使用GitHub Desktop
+1. 打开GitHub Desktop
+2. 选择此仓库: D:\magicdental开发备忘录\toothmen-官方说明文档系统\ToothMen-Docs-Simple
+3. 点击"Push origin"按钮
+
+## 🔍 网络诊断
+如果仍然失败，请检查:
+1. 网络连接是否正常
+2. 防火墙是否阻止了GitHub
+3. 是否使用了代理（需要配置Git代理）
+4. 尝试使用VPN
+
+## 📅 生成时间
+2026-04-14 19:08:58
