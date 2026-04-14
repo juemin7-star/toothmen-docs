@@ -1438,15 +1438,16 @@ module.exports = config;"""
                 
                 # Cloudflare网站地址
                 cloudflare_url = "https://docs.toothmen.com"
+                docs_home_url = f"{cloudflare_url}/docs"
                 
                 # 1. 先尝试打开网站
-                self.log(f"1. 正在打开Cloudflare网站: {cloudflare_url}", "info")
+                self.log(f"1. 正在打开Cloudflare网站: {docs_home_url}", "info")
                 try:
-                    webbrowser.open(cloudflare_url)
+                    webbrowser.open(docs_home_url)
                     self.log("✅ 已打开浏览器访问网站", "success")
                 except Exception as e:
                     self.log(f"⚠️  无法自动打开浏览器: {str(e)}", "warning")
-                    self.log(f"ℹ️  请手动访问: {cloudflare_url}", "info")
+                    self.log(f"ℹ️  请手动访问: {docs_home_url}", "info")
                 
                 # 2. 检查网站是否可访问
                 self.log("\n2. 检查网站是否可访问...", "info")
@@ -1454,12 +1455,11 @@ module.exports = config;"""
                 # 创建不验证SSL的上下文（仅用于测试）
                 context = ssl._create_unverified_context()
                 
-                # 尝试多个可能的URL（Cloudflare相关）
+                # 仅检查稳定入口URL，避免旧链接/中文路径导致误报
                 possible_urls = [
                     "https://docs.toothmen.com/",
                     "https://docs.toothmen.com",
-                    "https://docs.toothmen.com/docs/NEW-26040801-补丁",
-                    "https://docs.toothmen.com/docs/NEW-260400901-补丁"
+                    "https://docs.toothmen.com/docs"
                 ]
                 
                 site_accessible = False
@@ -1468,7 +1468,11 @@ module.exports = config;"""
                 
                 for url in possible_urls:
                     try:
-                        req = urllib.request.Request(url, method="HEAD")
+                        req = urllib.request.Request(
+                            url,
+                            method="GET",
+                            headers={"User-Agent": "ToothMenDocsManager/verify"}
+                        )
                         response = urllib.request.urlopen(req, timeout=10, context=context)
                         site_accessible = True
                         accessible_url = url
@@ -1476,13 +1480,16 @@ module.exports = config;"""
                         break
                     except urllib.error.HTTPError as e:
                         if e.code == 404:
-                            # 404是正常的，Cloudflare可能还在部署中
+                            # 404可能是路由尚未就绪或缓存未刷新
                             self.log(f"⚠️  网站返回404: {url}", "warning")
                             continue
                         elif e.code == 403:
-                            # 403也是正常的，Cloudflare可能还在构建或有限制
+                            # 403通常表示可达但受保护/暂时限制，视为可连通
                             self.log(f"⚠️  网站返回403: {url} (Cloudflare构建中或访问限制)", "warning")
-                            continue
+                            site_accessible = True
+                            accessible_url = url
+                            status_code = e.code
+                            break
                         else:
                             # 安全地处理错误信息，避免编码问题
                             error_msg = f"网站HTTP错误 {e.code}: {url}"
@@ -1545,17 +1552,7 @@ module.exports = config;"""
                 self.log("📱 请手动访问网站确认更新效果", "info")
                 
             except Exception as e:
-                # 安全地处理异常，避免编码问题
-                try:
-                    error_msg = str(e)
-                    # 如果是编码错误，提供更友好的信息
-                    if "'ascii' codec" in error_msg:
-                        self.log("❌ 部署验证失败: 编码错误（可能是中文字符处理问题）", "error")
-                        self.log("ℹ️  网站可能正在构建中，请稍后手动访问确认", "info")
-                    else:
-                        self.log(f"❌ 部署验证失败: {error_msg}", "error")
-                except:
-                    self.log("❌ 部署验证失败: 未知错误", "error")
+                self.log(f"❌ 部署验证失败: {str(e)}", "error")
         
         thread = threading.Thread(target=_verify_deployment)
         thread.daemon = True
