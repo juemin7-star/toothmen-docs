@@ -1010,16 +1010,33 @@ module.exports = config;"""
                 # 步骤4: 推送到远程仓库（带重试机制）
                 self.log("📋 步骤4: 推送到远程仓库", "info")
                 
-                # 先检查网络连接
+                # 先检查网络连接（同时检查SSH和HTTPS）
                 self.log("🔍 检查网络连接...", "info")
                 import socket
-                try:
-                    socket.create_connection(("github.com", 443), timeout=5)
-                    self.log("✅ 网络连接正常", "success")
-                except Exception as e:
-                    self.log(f"❌ 网络连接失败: {str(e)}", "error")
+                
+                # 检查多个可能的连接
+                connections_to_check = [
+                    ("github.com", 443),  # HTTPS
+                    ("github.com", 22),   # SSH
+                    ("github.com", 80)    # HTTP
+                ]
+                
+                connection_ok = False
+                for host, port in connections_to_check:
+                    try:
+                        socket.create_connection((host, port), timeout=5)
+                        self.log(f"✅ 可以连接到 {host}:{port}", "success")
+                        connection_ok = True
+                        break
+                    except Exception as e:
+                        self.log(f"⚠️  无法连接到 {host}:{port}: {str(e)}", "warning")
+                
+                if not connection_ok:
+                    self.log("❌ 网络连接失败", "error")
                     self.log("ℹ️  请检查网络连接后重试", "info")
                     return
+                else:
+                    self.log("✅ 网络连接正常", "success")
                 
                 # 尝试推送（最多重试3次）
                 max_retries = 3
