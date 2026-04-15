@@ -35,7 +35,6 @@ const sidebars = {
       type: 'category',
       label: 'Denti-Pro 更新日志',
       items: [
-        'changelog/index',
       {
         type: 'category',
         label: '2026年',

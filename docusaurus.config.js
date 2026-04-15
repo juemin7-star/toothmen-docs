@@ -81,7 +81,7 @@ const config = {
           },
           {
             type: 'doc',
-            docId: 'changelog/index',
+            docId: 'changelog/2026/2026-04',
             position: 'left',
             label: '更新日志',
           },
