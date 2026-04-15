@@ -62,7 +62,7 @@ const config = {
         },
         items: [          {
             type: 'doc',
-            docId: 'install/ToothMen-Dentipro安装总流程',
+            docId: 'install/硬件要求/电脑硬件要求',
             position: 'left',
             label: '程序安装',
           },

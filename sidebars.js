@@ -2,7 +2,22 @@
 // 文档 id 与磁盘路径一致：文件夹名/文件名（无扩展名）。
 const sidebars = {
   installSidebar: [
-    'install/ToothMen-Dentipro安装总流程',
+    {
+      type: 'category',
+      label: '硬件要求',
+      items: [
+        'install/硬件要求/电脑硬件要求',
+      ],
+      collapsed: true,
+    },
+    {
+      type: 'category',
+      label: '安装流程',
+      items: [
+        'install/安装流程/ToothMen-Dentipro安装总流程',
+      ],
+      collapsed: true,
+    },
   ],
   updateSidebar: [
     {
