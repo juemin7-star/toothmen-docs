@@ -69,7 +69,7 @@ const sidebars = {
       type: 'category',
       label: '组合导板教程',
       items: [
-        'tutorial/组合导板教程/组合导板',
+        'tutorial/组合导板教程/组合导板教程',
       ],
       collapsed: false,
     },
