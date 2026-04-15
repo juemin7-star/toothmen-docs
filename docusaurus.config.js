@@ -58,6 +58,7 @@ const config = {
         logo: {
           alt: 'ToothMen Logo',
           src: 'img/toothmenlogo.png',
+          href: '/docs',
         },
         items: [          {
             type: 'doc',
@@ -83,6 +84,7 @@ const config = {
           src: 'img/toothmenlogo.png',
           width: 48,
           height: 48,
+          href: '/docs',
         },
         links: [],
         copyright: `Copyright © ${new Date().getFullYear()} ToothMen. Built with Docusaurus.`,

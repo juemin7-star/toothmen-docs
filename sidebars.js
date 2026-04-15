@@ -17,8 +17,8 @@ const sidebars = {
         type: 'category',
         label: '2026年',
         items: [
-          'changelog/2026/2026-03',
           'changelog/2026/2026-04',
+          'changelog/2026/2026-03',
         ],
         collapsed: true,
       },
@@ -26,8 +26,8 @@ const sidebars = {
         type: 'category',
         label: '2025年',
         items: [
-          'changelog/2025/2025-01',
           'changelog/2025/2025-02',
+          'changelog/2025/2025-01',
         ],
         collapsed: true,
       },
