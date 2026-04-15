@@ -8,7 +8,6 @@ const sidebars = {
       label: '硬件要求',
       items: [
         'install/硬件要求/电脑硬件要求',
-        'install/硬件要求/yingjian-yaoqiu',
       ],
       collapsed: false,
     },
@@ -17,7 +16,6 @@ const sidebars = {
       label: '安装流程',
       items: [
         'install/安装流程/ToothMen-Dentipro安装总流程',
-        'install/安装流程/anzhuang-liucheng',
       ],
       collapsed: false,
     },
@@ -29,7 +27,6 @@ const sidebars = {
       label: '常规注册说明',
       items: [
         'cloud/常规注册说明/注册流程',
-        'cloud/常规注册说明/changgui-zhuce',
       ],
       collapsed: false,
     },
@@ -38,7 +35,6 @@ const sidebars = {
       label: '注册限流或封禁规则',
       items: [
         'cloud/注册限流或封禁规则/限流与封禁规则',
-        'cloud/注册限流或封禁规则/xianliu-fengjin',
       ],
       collapsed: false,
     },
@@ -79,7 +75,6 @@ const sidebars = {
         'changelog/2026/2026-04',
         'changelog/2026/2026-03',
         'changelog/2026/2026-02',
-        'changelog/2026/nian-2026',
       ],
       collapsed: false,
     },
@@ -89,7 +84,6 @@ const sidebars = {
       items: [
         'changelog/2025/2025-02',
         'changelog/2025/2025-01',
-        'changelog/2025/nian-2025',
       ],
       collapsed: false,
     },
