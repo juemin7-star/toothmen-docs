@@ -52,6 +52,12 @@ const config = {
   themeConfig:
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
     ({
+      // 不强制默认深色：首次访问跟随系统浅色/深色；右上角切换仍可用，用户选择会记住
+      colorMode: {
+        defaultMode: 'light',
+        disableSwitch: false,
+        respectPrefersColorScheme: true,
+      },
       // 替换为你的项目社交链接
       navbar: {
         title: 'ToothMen-DentiPro',
@@ -62,25 +68,25 @@ const config = {
         },
         items: [          {
             type: 'doc',
-            docId: 'install/硬件要求/电脑硬件要求',
+            docId: 'install/install',
             position: 'left',
             label: '程序安装',
           },
           {
             type: 'doc',
-            docId: 'changelog/2026/2026-04',
+            docId: 'changelog/changelog',
             position: 'left',
             label: '版本日志',
           },
           {
             type: 'doc',
-            docId: 'tutorial/软件基础教程/软件基础教程',
+            docId: 'tutorial/tutorial',
             position: 'left',
             label: '学习资料',
           },
           {
             type: 'doc',
-            docId: 'cloud/常规注册说明/注册流程',
+            docId: 'cloud/cloud',
             position: 'left',
             label: '云更新服务特别说明',
           },
