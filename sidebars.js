@@ -34,15 +34,15 @@ const sidebars = {
       type: 'category',
       label: '常规注册说明',
       items: [
-        'cloud/常规注册说明/注册流程',
+        'cloud/常规注册说明/快速注册流程',
       ],
       collapsed: false,
     },
     {
       type: 'category',
-      label: '注册限流或封禁规则',
+      label: '限流或封禁规则',
       items: [
-        'cloud/注册限流或封禁规则/限流与封禁规则',
+        'cloud/限流或封禁规则/限流与封禁规则',
       ],
       collapsed: false,
     },
