@@ -8,7 +8,7 @@ const sidebars = {
       items: [
         'install/硬件要求/电脑硬件要求',
       ],
-      collapsed: true,
+      collapsed: false,
     },
     {
       type: 'category',
@@ -16,7 +16,7 @@ const sidebars = {
       items: [
         'install/安装流程/ToothMen-Dentipro安装总流程',
       ],
-      collapsed: true,
+      collapsed: false,
     },
   ],
   updateSidebar: [
@@ -26,7 +26,7 @@ const sidebars = {
       items: [
         'cloud/常规注册说明/注册流程',
       ],
-      collapsed: true,
+      collapsed: false,
     },
     {
       type: 'category',
@@ -34,7 +34,7 @@ const sidebars = {
       items: [
         'cloud/注册限流或封禁规则/限流与封禁规则',
       ],
-      collapsed: true,
+      collapsed: false,
     },
   ],
   tutorialSidebar: [
@@ -44,7 +44,7 @@ const sidebars = {
       items: [
         'tutorial/软件基础教程/软件基础教程',
       ],
-      collapsed: true,
+      collapsed: false,
     },
     {
       type: 'category',
@@ -52,7 +52,7 @@ const sidebars = {
       items: [
         'tutorial/3D钛网教程/3D钛网教程',
       ],
-      collapsed: true,
+      collapsed: false,
     },
     {
       type: 'category',
@@ -60,7 +60,7 @@ const sidebars = {
       items: [
         'tutorial/Ai颌骨提取教程/Ai颌骨提取教程',
       ],
-      collapsed: true,
+      collapsed: false,
     },
   ],
   changelogSidebar: [
@@ -72,7 +72,7 @@ const sidebars = {
         'changelog/2026/2026-03',
         'changelog/2026/2026-02',
       ],
-      collapsed: true,
+      collapsed: false,
     },
     {
       type: 'category',
@@ -81,7 +81,7 @@ const sidebars = {
         'changelog/2025/2025-02',
         'changelog/2025/2025-01',
       ],
-      collapsed: true,
+      collapsed: false,
     },
   ],
 };
