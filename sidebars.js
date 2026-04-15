@@ -10,6 +10,15 @@ const sidebars = {
     },
     {
       type: 'category',
+      label: '云更新服务说明',
+      items: [
+        'cloud/registration',
+        'cloud/special',
+      ],
+      collapsed: true,
+    },
+    {
+      type: 'category',
       label: 'Denti-Pro 更新日志',
       items: [
         'changelog/index',
@@ -31,15 +40,6 @@ const sidebars = {
         ],
         collapsed: true,
       },
-      ],
-      collapsed: true,
-    },
-    {
-      type: 'category',
-      label: '云更新服务说明',
-      items: [
-        'cloud/registration',
-        'cloud/special',
       ],
       collapsed: true,
     },
