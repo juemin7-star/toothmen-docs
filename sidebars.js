@@ -70,6 +70,7 @@ const sidebars = {
       items: [
         'changelog/2026/2026-04',
         'changelog/2026/2026-03',
+        'changelog/2026/2026-02',
       ],
       collapsed: true,
     },
