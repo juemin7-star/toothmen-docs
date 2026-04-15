@@ -41,6 +41,13 @@
 .footer__logo {
   display: block;
   margin: 0 auto 12px;
+  position: relative;
+  z-index: 1;
+  opacity: 1;
+  padding: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
 }
 
 /* /docs 门户页：卡片网格（参考 learn 类站点的分区入口） */

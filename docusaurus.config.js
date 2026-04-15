@@ -105,7 +105,7 @@ const config = {
           href: '/docs',
         },
         links: [],
-        copyright: `Copyright © ${new Date().getFullYear()} ToothMen. Built with Docusaurus.`,
+        copyright: `Copyright © 2026 ToothMen（兔斯曼）天津科技有限责任公司`,
       },
     }),
 
