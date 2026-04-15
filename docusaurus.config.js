@@ -5,7 +5,7 @@
 const config = {
   title: 'ToothMen文档系统',
   tagline: 'ToothMen官方说明文档',
-  favicon: 'img/favicon.ico',
+  favicon: 'img/toothmenlogo.png',
 
   // 设置生产环境的URL
   url: 'https://your-docusaurus-site.example.com',
