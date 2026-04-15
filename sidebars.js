@@ -2,14 +2,51 @@
 // 文档 id 与磁盘路径一致：文件夹名/文件名（无扩展名）。
 const sidebars = {
   installSidebar: [
-    'install/index',
+    'install/ToothMen-Dentipro安装总流程',
   ],
   updateSidebar: [
-    'cloud/registration',
-    'cloud/special',
+    {
+      type: 'category',
+      label: '常规注册说明',
+      items: [
+        'cloud/常规注册说明/注册流程',
+      ],
+      collapsed: true,
+    },
+    {
+      type: 'category',
+      label: '注册限流或封禁规则',
+      items: [
+        'cloud/注册限流或封禁规则/限流与封禁规则',
+      ],
+      collapsed: true,
+    },
   ],
   tutorialSidebar: [
-    'tutorial/index',
+    {
+      type: 'category',
+      label: '软件基础教程',
+      items: [
+        'tutorial/软件基础教程/软件基础教程',
+      ],
+      collapsed: true,
+    },
+    {
+      type: 'category',
+      label: '3D钛网教程',
+      items: [
+        'tutorial/3D钛网教程/3D钛网教程',
+      ],
+      collapsed: true,
+    },
+    {
+      type: 'category',
+      label: 'Ai颌骨提取教程',
+      items: [
+        'tutorial/Ai颌骨提取教程/Ai颌骨提取教程',
+      ],
+      collapsed: true,
+    },
   ],
   changelogSidebar: [
     {

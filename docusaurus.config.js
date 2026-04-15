@@ -60,10 +60,9 @@ const config = {
           src: 'img/toothmenlogo.png',
           href: '/docs',
         },
-        items: [
-          {
+        items: [          {
             type: 'doc',
-            docId: 'install/index',
+            docId: 'install/ToothMen-Dentipro安装总流程',
             position: 'left',
             label: '程序安装',
           },
@@ -75,21 +74,20 @@ const config = {
           },
           {
             type: 'doc',
-            docId: 'tutorial/index',
+            docId: 'tutorial/软件基础教程/软件基础教程',
             position: 'left',
             label: '学习资料',
           },
           {
             type: 'doc',
-            docId: 'cloud/registration',
+            docId: 'cloud/常规注册说明/注册流程',
             position: 'left',
             label: '云更新服务特别说明',
           },
           {
             type: 'search',
             position: 'right',
-          },
-        ],
+          },],
       },
       footer: {
         style: 'dark',
