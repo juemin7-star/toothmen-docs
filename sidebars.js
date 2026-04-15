@@ -51,6 +51,14 @@ const sidebars = {
     },
     {
       type: 'category',
+      label: 'Ai颌骨提取教程',
+      items: [
+        'tutorial/Ai颌骨提取教程/Ai颌骨提取教程',
+      ],
+      collapsed: false,
+    },
+    {
+      type: 'category',
       label: '3D钛网教程',
       items: [
         'tutorial/3D钛网教程/3D钛网教程',
@@ -59,9 +67,9 @@ const sidebars = {
     },
     {
       type: 'category',
-      label: 'Ai颌骨提取教程',
+      label: '组合导板教程',
       items: [
-        'tutorial/Ai颌骨提取教程/Ai颌骨提取教程',
+        'tutorial/组合导板教程/组合导板',
       ],
       collapsed: false,
     },
