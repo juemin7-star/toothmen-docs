@@ -82,7 +82,7 @@ const config = {
             type: 'doc',
             docId: 'tutorial/tutorial',
             position: 'left',
-            label: '学习资料',
+            label: '教程',
           },
           {
             type: 'doc',
