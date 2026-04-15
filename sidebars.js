@@ -81,6 +81,15 @@ const sidebars = {
       ],
       collapsed: false,
     },
+    {
+      type: 'category',
+      label: '自定义数据库教程',
+      items: [
+        'tutorial/自定义数据库教程/自定义数据库总流程',
+        'tutorial/自定义数据库教程/自定义数据库绘制教程',
+      ],
+      collapsed: false,
+    },
   ],
   changelogSidebar: [
     'changelog/changelog',
