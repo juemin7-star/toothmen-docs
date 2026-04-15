@@ -1,13 +1,54 @@
 ---
 title: 文档中心
 description: ToothMen DentiPro 官方说明文档
+displayed_sidebar: null
 ---
+
+import DocCard from '@theme/DocCard';
 
 # ToothMen DentiPro 文档
 
-简洁入口（英文路径，便于分享与收藏）：
+集中入口：下方卡片对应顶栏 **安装**、**更新**、**教程**、**更新日志** 四个分区（URL 仍使用英文路径，便于分享与收藏）。
 
-- [主程序安装](/docs/install)
-- [更新日志](/docs/changelog)
-- [云更新 · 注册说明](/docs/cloud/registration)
-- [云更新 · 特殊说明](/docs/cloud/special)
+<div className="row docs-hub-grid">
+  <div className="col col--6 margin-bottom--md">
+    <DocCard
+      item={{
+        type: 'link',
+        label: '安装',
+        href: '/docs/install',
+        description: '主程序安装与环境、数据库等说明。',
+      }}
+    />
+  </div>
+  <div className="col col--6 margin-bottom--md">
+    <DocCard
+      item={{
+        type: 'link',
+        label: '更新',
+        href: '/docs/cloud/registration',
+        description: '云更新服务注册与特殊规则说明。',
+      }}
+    />
+  </div>
+  <div className="col col--6 margin-bottom--md">
+    <DocCard
+      item={{
+        type: 'link',
+        label: '教程',
+        href: '/docs/tutorial',
+        description: '分步学习与场景化教程（持续扩充）。',
+      }}
+    />
+  </div>
+  <div className="col col--6 margin-bottom--md">
+    <DocCard
+      item={{
+        type: 'link',
+        label: '更新日志',
+        href: '/docs/changelog',
+        description: 'Denti-Pro 各版本与月度更新说明。',
+      }}
+    />
+  </div>
+</div>

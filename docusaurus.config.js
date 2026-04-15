@@ -60,11 +60,24 @@ const config = {
           src: 'img/toothmenlogo.png',
           href: '/docs',
         },
-        items: [          {
+        items: [
+          {
             type: 'doc',
             docId: 'install/index',
             position: 'left',
-            label: '总文档中心',
+            label: '安装',
+          },
+          {
+            type: 'doc',
+            docId: 'cloud/registration',
+            position: 'left',
+            label: '更新',
+          },
+          {
+            type: 'doc',
+            docId: 'tutorial/index',
+            position: 'left',
+            label: '教程',
           },
           {
             type: 'doc',
@@ -75,7 +88,8 @@ const config = {
           {
             type: 'search',
             position: 'right',
-          },],
+          },
+        ],
       },
       footer: {
         style: 'dark',

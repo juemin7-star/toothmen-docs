@@ -1,5 +1,5 @@
 const sidebars = {
-  tutorialSidebar: [
+  installSidebar: [
     {
       type: 'category',
       label: '主程序安装',
@@ -8,6 +8,8 @@ const sidebars = {
       ],
       collapsed: true,
     },
+  ],
+  updateSidebar: [
     {
       type: 'category',
       label: '云更新服务说明',
@@ -17,6 +19,18 @@ const sidebars = {
       ],
       collapsed: true,
     },
+  ],
+  tutorialSidebar: [
+    {
+      type: 'category',
+      label: '学习教程',
+      items: [
+        'tutorial/index',
+      ],
+      collapsed: true,
+    },
+  ],
+  changelogSidebar: [
     {
       type: 'category',
       label: 'Denti-Pro 更新日志',
