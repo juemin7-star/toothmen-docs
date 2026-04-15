@@ -13,9 +13,17 @@ const sidebars = {
     },
     {
       type: 'category',
-      label: '安装流程',
+      label: '黑金版安装流程',
       items: [
-        'install/安装流程/ToothMen-Dentipro安装总流程',
+        'install/黑金版安装流程/ToothMen-Dentipro-黑金版安装总流程',
+      ],
+      collapsed: false,
+    },
+    {
+      type: 'category',
+      label: '社区版安装流程',
+      items: [
+        'install/社区版安装流程/ToothMen-Dentipro-社区版安装总流程',
       ],
       collapsed: false,
     },
