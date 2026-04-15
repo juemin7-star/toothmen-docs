@@ -44,10 +44,19 @@
 }
 
 /* /docs 门户页：卡片网格（参考 learn 类站点的分区入口） */
+.docs-hub-grid {
+  margin-top: 1.25rem;
+}
 .docs-hub-grid .card {
   height: 100%;
 }
 .docs-hub-grid .card:hover {
   border-color: var(--ifm-color-primary);
   box-shadow: var(--ifm-global-shadow-lw);
+}
+.docs-hub-grid .card__header h4 {
+  margin-bottom: 0;
+}
+.docs-hub-grid .card__body p:last-child {
+  margin-bottom: 0;
 }
