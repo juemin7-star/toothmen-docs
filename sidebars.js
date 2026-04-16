@@ -67,6 +67,14 @@ const sidebars = {
     },
     {
       type: 'category',
+      label: 'Ai颌骨提取项目说明',
+      items: [
+        'tutorial/Ai颌骨提取项目说明/AI颌骨提取项目说明',
+      ],
+      collapsed: false,
+    },
+    {
+      type: 'category',
       label: '3D钛网教程',
       items: [
         'tutorial/3D钛网教程/3D钛网教程',

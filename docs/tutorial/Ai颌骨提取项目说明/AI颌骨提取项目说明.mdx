@@ -1,0 +1,63 @@
+---
+title: AI颌骨提取项目说明
+description: AI颌骨提取项目说明
+sidebar_position: 1
+displayed_sidebar: tutorialSidebar
+---
+# ToothMen-DentiPro-AI颌骨提取项目说明
+
+
+
+## 项目简介
+
+​      
+
+​       该项目基于 Apache License2.0的开源项目Slicer DentalSegmentator（https://github.com/gaudot/SlicerDentalSegmentator?tab=readme-ov-file）深度优化并引入ToothMen-DentiPro的工作流中，是目前AI颌骨提取领域的一项代表性技术。ToothMen基于该项技术现开发了ToothMen-DentiPro社区版以及ToothMen-DentiPro黑金版定制插件，两款插件均是ToothMen-DentiPro综合辅助软件的免费而强大的医学影响处理模块。
+
+​      该模块可以借助本地GPU的超强AI算力，在3-5分钟完成对：上颅骨&上颌骨&下颌骨&上牙&下牙&下颌管等结构的快速精准分割，相对与原版不同的是，ToothMen将其成功引入了ToothMen-DentiPro（基于Blender4.5.5LTS）的工作流，目前，经过深度优化后的版本，支持任何格式（RAR.ZIP.7Z,DCM)的DICOM数据，并支持自动命名，自动归类，自动后处理优化，以及支持无人值守批量提取。该优化后的版本可以一键直装，自动匹配计算机硬件，自动适配及调用CUDA显卡核心，真正实现一键无忧部署与稳定高品质输出。
+
+
+
+<img src="https://github.com/gaudot/SlicerDentalSegmentator/raw/main/Screenshots/dentalsegmentator_example.png" style={{zoom: '67%'}} />
+
+
+
+​       DentalSegmentator 基于 nnU-Net 框架。该测试基于 470 次牙颌面 CT 和 CBCT 扫描进行训练，并在 7 所机构的 256 份 CT 和 CBCT 扫描的保留测试数据集中进行评估。经过众多高度多样化数据集的结果表明，该工具能够为牙颌面CBCT 扫描提供全自动且稳健的多类分割，且不受扫描视野影响。相关论文如下：
+
+
+
+## 拓展阅读
+
+> Dot G, et al. DentalSegmentator: robust open source deep learning-based CT and CBCT image segmentation. Journal of Dentistry (2024) doi:[10.1016/j.jdent.2024.105130](https://doi.org/10.1016/j.jdent.2024.105130)
+> Dot G 等人。DentalSegmentator：基于深度学习的强大开源 CT 和 CBCT 图像分割。牙科杂志（2024） doi：[10.1016/j.jdent.2024.105130](https://doi.org/10.1016/j.jdent.2024.105130)
+
+> Isensee F, et al. nnU-Net: a self-configuring method for deep learning-based biomedical image segmentation. Nat Methods. 2021;18(2):203-211. doi:[10.1038/s41592-020-01008-z](https://doi.org/10.1038/s41592-020-01008-z)
+> Isensee F 等人。nnU-Net：一种基于深度学习的生物医学图像分割自我配置方法。自然方法。2021;18(2):203-211.DOI：[10.1038/S41592-020-01008-z](https://doi.org/10.1038/s41592-020-01008-z)
+>
+> 
+>
+
+<img src="https://github.com/gaudot/SlicerDentalSegmentator/raw/main/Screenshots/badge_dentalsegmentator.png" style={{zoom: '25%'}} />
+
+
+
+## Acknowledgments 致谢
+
+
+
+Authors: G. Dot (Université Paris Cité, AP-HP, Arts-et-Métiers), L. Gajny (Arts-et-Métiers), R. Fenioux (Kitware SAS), T. Pelletier (Kitware SAS)
+作者：G. Dot（巴黎城市大学，AP-HP，Arts-et-Métiers），L. Gajny（艺术与工艺），R. Fenioux（套件 SAS），T. Pelletier（Kitware SAS）
+
+Supported by the [FFO (Fédération Française d'Orthodontie)](https://orthodontie-ffo.org/) and the [Fondation des Gueules Cassées](https://www.gueules-cassees.asso.fr/).
+由[法国正畸联合会（FFO）](https://orthodontie-ffo.org/) 和[牙医基金会（Fondation des Gueules Cassées](https://www.gueules-cassees.asso.fr/)）支持。
+
+
+
+
+
+
+
+
+
+
+
