@@ -124,6 +124,7 @@ const sidebars = {
         'changelog/2026/20260228',
         'changelog/2026/20260117',
         'changelog/2026/20260107',
+        'changelog/2026/202606232',
       ],
       collapsed: false,
     },
