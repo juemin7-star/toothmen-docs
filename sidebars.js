@@ -105,7 +105,7 @@ const sidebars = {
       type: 'category',
       label: '2026',
       items: [
-        'changelog/2026/20260725',
+        'changelog/2026/202607253',
         'changelog/2026/20260714',
         'changelog/2026/20260713',
         'changelog/2026/20260710',
